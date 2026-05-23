@@ -452,7 +452,12 @@ function showView(name) {
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
 
-  if (name === 'browse')     render();
+  if (name === 'browse') {
+    document.getElementById('search-input').value = '';
+    mealDbResults      = [];
+    spoonacularResults = [];
+    render();
+  }
   if (name === 'favourites') renderFavourites();
   if (name === 'shopping')   renderShopping();
   if (name === 'settings') {
