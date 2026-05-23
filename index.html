@@ -576,8 +576,8 @@ function inferCookingType(title, instructions) {
   const text = (title + ' ' + instructions.join(' ')).toLowerCase();
   const types = new Set();
 
-  // Air fryer (specific — check first)
-  if (/\bair[- ]?fry(er)?\b/.test(text)) types.add('airfryer');
+  // Air fryer (specific — check first, catch all common spellings)
+  if (/\bair[- ]?fr(y(er|ing)?|ied)\b|\bairfr(y(er|ing)?|ied)\b/.test(text)) types.add('airfryer');
 
   // Oven (ugn) — strong signals: preheat, bake, roast, baking dish
   if (/\b(preheat (the )?oven|in the oven|bake (for|in|at|until)|baked|baking (sheet|dish|tray|pan)|roast(ed|ing)? (for|in|at|until)|casserole dish)\b/.test(text)) types.add('ugn');
@@ -763,7 +763,7 @@ const PROTEIN_TO_MDB_QUERY = {
   fisk:     'fish',    skaldjur: 'shrimp',  vegetarisk: 'vegetable', vegan: 'vegan',
 };
 const COOKINGTYPE_TO_MDB_QUERY = {
-  ugn: 'baked', panna: 'fried',   airfryer: 'fried',
+  ugn: 'baked', panna: 'fried',   airfryer: 'air fryer',
   gryta: 'stew', grill: 'grilled', wok: 'stir', kokt: 'boiled',
 };
 
@@ -1430,7 +1430,6 @@ async function searchSpoonacular(query) {
     const params = new URLSearchParams({ spc: query });
     if (filters.protein === 'vegetarisk') params.set('diet', 'vegetarian');
     if (filters.protein === 'vegan')      params.set('diet', 'vegan');
-    if (filters.cookingType === 'airfryer') params.set('equipment', 'air fryer');
 
     const res = await fetch(`${workerUrl}?${params}`);
     if (!res.ok) return [];
