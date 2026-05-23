@@ -176,6 +176,7 @@
     <button class="filter-chip" data-type="protein" onclick="openFilter('protein')">Protein ▾</button>
     <button class="filter-chip" data-type="time" onclick="openFilter('time')">Time ▾</button>
     <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')">Prep ▾</button>
+    <button class="filter-chip" data-type="diet" onclick="openFilter('diet')">Diet ▾</button>
   </div>
   <div id="recipe-grid"></div>
 </div>
@@ -395,6 +396,10 @@ const PREP_OPTIONS = [
   { val: '999', label: '🕰 Any' },
 ];
 
+const DIET_OPTIONS = [
+  { val: 'glutenfree', label: '🌾 Gluten-free' },
+];
+
 const KNOWN_SITES = {
   'koket.se':  'köket.se',
   'ica.se':    'ICA',
@@ -408,7 +413,7 @@ const KNOWN_SITES = {
 // ═══════════════════════════════════════════════════
 let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
-let filters       = { cookingType: null, protein: null, time: null, prepTime: null };
+let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
 let mealDbResults    = [];   // live TheMealDB search results (not yet saved)
 let spoonacularResults = []; // live Spoonacular search results (not yet saved)
@@ -509,7 +514,7 @@ function showAddForm(recipe) {
 // Filter logic
 // ═══════════════════════════════════════════════════
 function openFilter(type) {
-  const cfg = { cookingType: { label: 'Cooking method', opts: COOKING_TYPES }, protein: { label: 'Protein', opts: PROTEINS }, time: { label: 'Time', opts: TIME_OPTIONS }, prepTime: { label: 'Prep time', opts: PREP_OPTIONS } }[type];
+  const cfg = { cookingType: { label: 'Cooking method', opts: COOKING_TYPES }, protein: { label: 'Protein', opts: PROTEINS }, time: { label: 'Time', opts: TIME_OPTIONS }, prepTime: { label: 'Prep time', opts: PREP_OPTIONS }, diet: { label: 'Dietary needs', opts: DIET_OPTIONS } }[type];
   const current = filters[type];
 
   let html = `<div class="filter-modal-title">${cfg.label}</div><div class="chip-group">`;
@@ -541,8 +546,8 @@ function maybeCloseFilter(e) {
 }
 
 function updateFilterChips() {
-  const defaults = { cookingType: 'Method', protein: 'Protein', time: 'Time', prepTime: 'Prep' };
-  const allOpts = { cookingType: COOKING_TYPES, protein: PROTEINS, time: TIME_OPTIONS, prepTime: PREP_OPTIONS };
+  const defaults = { cookingType: 'Method', protein: 'Protein', time: 'Time', prepTime: 'Prep', diet: 'Diet' };
+  const allOpts = { cookingType: COOKING_TYPES, protein: PROTEINS, time: TIME_OPTIONS, prepTime: PREP_OPTIONS, diet: DIET_OPTIONS };
 
   Object.keys(defaults).forEach(type => {
     const chip = document.querySelector(`.filter-chip[data-type="${type}"]`);
@@ -905,7 +910,7 @@ function render() {
   const grid   = document.getElementById('recipe-grid');
   const search = (document.getElementById('search-input').value || '').trim();
   const q      = search.toLowerCase();
-  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime);
+  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime || filters.diet);
 
   // ── Search mode: typed search OR filters that triggered a TheMealDB query ──
   if (search.length >= 2 || hasFilters) {
@@ -928,7 +933,11 @@ function render() {
       if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
       return true;
     }
-    const mdbFiltered = mealDbResults.filter(applyLiveFilters);
+    const mdbFiltered = mealDbResults.filter(r => {
+      if (!applyLiveFilters(r)) return false;
+      if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
+      return true;
+    });
     // Spoonacular: skip cookingType filter — the search query already targets the right method.
     // Only apply protein and time filters on top of what Spoonacular returned.
     const spcFiltered = spoonacularResults.filter(r => {
@@ -943,6 +952,7 @@ function render() {
       if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
       if (filters.time)    { const max = parseInt(filters.time);    if (r.time     && r.time     > max) return false; }
       if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
+      if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
       return true;
     });
 
@@ -975,6 +985,7 @@ function render() {
     if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
     if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
     if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
+    if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
     return true;
   });
 
@@ -1157,6 +1168,21 @@ function clearAll() {
     saveData();
     renderShopping();
   }
+}
+
+// ── Gluten detection: scan ingredient names for gluten-containing items ──
+// Used for TheMealDB and saved recipes (Spoonacular uses intolerances= API param instead)
+function hasGluten(recipe) {
+  const names = (recipe.ingredients || []).map(i => i.name.toLowerCase());
+  return names.some(n => {
+    if (/\bbarley\b/.test(n)) return true;
+    if (/\brye\b/.test(n)) return true;
+    // wheat — but not buckwheat (which is naturally gluten-free)
+    if (/\bwheat\b/.test(n) && !/\bbuckwheat\b/.test(n)) return true;
+    // flour — but not common gluten-free flours
+    if (/\bflour\b/.test(n) && !/\b(rice|almond|coconut|tapioca|chickpea|corn|potato|buckwheat|oat|cassava|teff|sorghum)\b/.test(n)) return true;
+    return false;
+  });
 }
 
 // ── Classify a shopping item into a store category by name keywords ──
@@ -1432,6 +1458,7 @@ async function searchSpoonacular(query) {
     const params = new URLSearchParams({ spc: query });
     if (filters.protein === 'vegetarisk') params.set('diet', 'vegetarian');
     if (filters.protein === 'vegan')      params.set('diet', 'vegan');
+    if (filters.diet === 'glutenfree')    params.set('intolerances', 'gluten');
 
     const res = await fetch(`${workerUrl}?${params}`);
     if (!res.ok) return [];
