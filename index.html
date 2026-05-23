@@ -568,14 +568,106 @@ function inferCookingType(title, instructions) {
   return [...types];
 }
 
+// ── Unit conversion: US/imperial → metric (kg, g, dl, ml, liter) ──
+const FRACTIONS = { '½':0.5,'¼':0.25,'¾':0.75,'⅓':0.333,'⅔':0.667,'⅛':0.125,'⅜':0.375,'⅝':0.625,'⅞':0.875 };
+
+function parseAmount(s) {
+  if (!s) return null;
+  s = s.trim();
+  // Unicode fraction (optionally with whole part): "1½", "½"
+  for (const [f, v] of Object.entries(FRACTIONS)) {
+    if (s.includes(f)) {
+      const m = s.match(new RegExp(`^(\\d+)?\\s*${f}$`));
+      if (m) return parseInt(m[1] || 0) + v;
+    }
+  }
+  // Mixed fraction: "1 1/2"
+  const mx = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mx) return parseInt(mx[1]) + parseInt(mx[2])/parseInt(mx[3]);
+  // Plain fraction: "1/2"
+  const fr = s.match(/^(\d+)\/(\d+)$/);
+  if (fr) return parseInt(fr[1])/parseInt(fr[2]);
+  // Range: "2-3" or "2 to 3" → use lower
+  const rg = s.match(/^(\d+(?:\.\d+)?)\s*(?:[-–to]+)\s*\d/);
+  if (rg) return parseFloat(rg[1]);
+  // Plain number
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function formatNum(n) {
+  if (n >= 100) return String(Math.round(n));
+  if (n >= 10)  return String(Math.round(n));
+  if (n >= 1)   return n % 1 === 0 ? String(n) : n.toFixed(1);
+  return n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function convertMeasure(measureStr) {
+  if (!measureStr) return { amount: '', unit: '' };
+  const str = measureStr.trim();
+  // Split numeric prefix from rest
+  const m = str.match(/^([\d.,/\s½¼¾⅓⅔⅛⅜⅝⅞-]+)\s*(.*)$/);
+  if (!m || !m[1].trim()) return { amount: '', unit: str };
+
+  const n = parseAmount(m[1].trim());
+  if (n === null) return { amount: '', unit: str };
+  const rest = (m[2] || '').trim();
+
+  // Unit table: factor + target unit. Order matters for matching.
+  const units = [
+    ['tablespoons', 15, 'ml'], ['tablespoon', 15, 'ml'], ['tbsp', 15, 'ml'], ['tbs', 15, 'ml'], ['tbl', 15, 'ml'],
+    ['teaspoons', 5,  'ml'],  ['teaspoon', 5,  'ml'],  ['tsp', 5,  'ml'],
+    ['fl oz', 30, 'ml'], ['fl. oz', 30, 'ml'], ['fluid ounce', 30, 'ml'], ['fluid ounces', 30, 'ml'],
+    ['cups', 2.4, 'dl'], ['cup', 2.4, 'dl'],
+    ['pounds', 454, 'g'], ['pound', 454, 'g'], ['lbs', 454, 'g'], ['lb', 454, 'g'],
+    ['ounces', 28, 'g'], ['ounce', 28, 'g'], ['oz', 28, 'g'],
+    ['pints', 470, 'ml'], ['pint', 470, 'ml'],
+    ['quarts', 950, 'ml'], ['quart', 950, 'ml'],
+    ['gallon', 3800, 'ml'],
+    ['inches', 2.54, 'cm'], ['inch', 2.54, 'cm'],
+    // Already metric — passthrough
+    ['kg', 1000, 'g'], ['grams', 1, 'g'], ['gram', 1, 'g'], ['g', 1, 'g'],
+    ['liters', 1000, 'ml'], ['liter', 1000, 'ml'], ['litre', 1000, 'ml'], ['l', 1000, 'ml'],
+    ['ml', 1, 'ml'],
+    ['dl', 100, 'ml'], ['deciliter', 100, 'ml'],
+  ];
+
+  const lower = rest.toLowerCase();
+  let match = null, descriptor = rest;
+  for (const [key, factor, unit] of units) {
+    const re = new RegExp(`^${key.replace(/\./g, '\\.')}\\.?\\b`, 'i');
+    if (re.test(lower)) {
+      match = { factor, unit };
+      descriptor = rest.replace(new RegExp(`^${key.replace(/\./g, '\\.')}\\.?\\s*`, 'i'), '').trim();
+      break;
+    }
+  }
+
+  if (!match) {
+    // No unit recognized — keep number + descriptor (e.g. "2 cloves", "1 large")
+    return { amount: formatNum(n), unit: rest };
+  }
+
+  let value = n * match.factor;
+  let unit  = match.unit;
+
+  // Promote to larger unit where it reads better
+  if (unit === 'ml' && value >= 1000) { value /= 1000; unit = 'liter'; }
+  else if (unit === 'ml' && value >= 100)  { value /= 100;  unit = 'dl'; }
+  else if (unit === 'g'  && value >= 1000) { value /= 1000; unit = 'kg'; }
+
+  const fullUnit = descriptor ? `${unit} ${descriptor}` : unit;
+  return { amount: formatNum(value), unit: fullUnit };
+}
+
 function mealDbToRecipe(meal) {
   const ingredients = [];
   for (let i = 1; i <= 20; i++) {
     const name    = (meal[`strIngredient${i}`] || '').trim();
     const measure = (meal[`strMeasure${i}`]    || '').trim();
     if (!name) break;
-    const parts = measure.split(/\s+/);
-    ingredients.push({ name, amount: parts[0] || '', unit: parts.slice(1).join(' ') });
+    const { amount, unit } = convertMeasure(measure);
+    ingredients.push({ name, amount, unit });
   }
   const instructions = (meal.strInstructions || '')
     .split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 4);
@@ -1081,8 +1173,16 @@ async function fetchRecipeFromUrl() {
     if (data.servings)   document.getElementById('f-servings').value     = data.servings;
     if (data.instructions && data.instructions.length)
       document.getElementById('f-instructions').value = data.instructions.join('\n');
-    if (data.ingredients && data.ingredients.length)
-      renderIngredientEditor(data.ingredients);
+    if (data.ingredients && data.ingredients.length) {
+      // Convert any imperial units to metric (cups/lb/oz → dl/g/kg)
+      const converted = data.ingredients.map(ing => {
+        const measureStr = `${ing.amount || ''} ${ing.unit || ''}`.trim();
+        if (!measureStr) return ing;
+        const c = convertMeasure(measureStr);
+        return { name: ing.name, amount: c.amount, unit: c.unit };
+      });
+      renderIngredientEditor(converted);
+    }
 
     statusEl.textContent = '✅ Fetched! Review, pick a cooking method, then Save.';
     statusEl.style.color = 'var(--accent)';
