@@ -456,7 +456,7 @@ function showView(name) {
     document.getElementById('search-input').value = '';
     mealDbResults      = [];
     spoonacularResults = [];
-    render();
+    triggerSearch(); // re-queries if filters active, shows prompt if not
   }
   if (name === 'favourites') renderFavourites();
   if (name === 'shopping')   renderShopping();
