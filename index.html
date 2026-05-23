@@ -990,23 +990,9 @@ function render() {
     return;
   }
 
-  // ── No active search: show saved recipes with filters ──
-  const visible = recipes.filter(r => {
-    if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
-    if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
-    if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
-    if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
-    if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
-    return true;
-  });
-
-  if (visible.length === 0) {
-    grid.innerHTML = `<div class="empty"><div class="big">🍽</div>
-      <p>No saved recipes yet.<br>Search above or add one<br>from a URL on the <strong>+</strong> tab.</p></div>`;
-    return;
-  }
-
-  grid.innerHTML = visible.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
+  // ── No active search: show prompt ──
+  grid.innerHTML = `<div class="empty"><div class="big">🔍</div>
+    <p>Search for a recipe above,<br>or use the filters to browse<br>by method, protein or diet.</p></div>`;
 }
 
 
