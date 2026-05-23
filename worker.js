@@ -42,9 +42,10 @@ async function spoonacularSearch(query, params, env, corsHeaders) {
   try {
     const spcParams = new URLSearchParams({
       query,
-      number: '12',
+      number: '16',
       addRecipeInformation: 'true',
       fillIngredients: 'true',
+      sort: 'popularity',
       apiKey: key,
     });
     const diet      = params.get('diet');

@@ -38,8 +38,9 @@
     #search-wrap::before { content: '🔍'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
 
     /* ── Filters ── */
-    #filter-bar { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    #filter-bar { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     #filter-bar::-webkit-scrollbar { display: none; }
+    #filter-bar-diet { display: flex; gap: 8px; margin-bottom: 12px; }
     .filter-chip { white-space: nowrap; padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-size: 14px; cursor: pointer; color: var(--text); flex-shrink: 0; font-family: inherit; }
     .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
 
@@ -50,7 +51,9 @@
     .recipe-card-visual { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
     .recipe-card-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
     .recipe-card { position: relative; }
-    .card-fav-badge { position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 14px; pointer-events: none; }
+    .card-fav-badge { position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.9); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; border: none; font-family: inherit; line-height: 1; padding: 0; }
+    .card-fav-badge:active { transform: scale(0.88); }
+    .card-likes-badge { position: absolute; top: 6px; left: 6px; background: rgba(255,255,255,0.9); border-radius: 10px; padding: 3px 7px; font-size: 11px; font-weight: 700; color: #be185d; pointer-events: none; }
     .recipe-card-body { padding: 10px 12px 12px; }
     /* ── Heart toggle on detail panel ── */
     .fav-toggle { position: absolute; top: 14px; right: 60px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.9); border: none; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; font-family: inherit; line-height: 1; }
@@ -176,6 +179,8 @@
     <button class="filter-chip" data-type="protein" onclick="openFilter('protein')">Protein ▾</button>
     <button class="filter-chip" data-type="time" onclick="openFilter('time')">Time ▾</button>
     <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')">Prep ▾</button>
+  </div>
+  <div id="filter-bar-diet">
     <button class="filter-chip" data-type="diet" onclick="openFilter('diet')">Diet ▾</button>
   </div>
   <div id="recipe-grid"></div>
@@ -863,7 +868,8 @@ function recipeCardHtml(r, onclick) {
   const isFav = isFavourite(r.id);
   return `<div class="recipe-card" onclick="${onclick}">
     ${cardVisualHtml(r)}
-    ${isFav ? `<div class="card-fav-badge">❤️</div>` : ''}
+    <button class="card-fav-badge" onclick="event.stopPropagation();toggleFavourite('${r.id}')" aria-label="${isFav ? 'Remove from favourites' : 'Add to favourites'}">${isFav ? '❤️' : '🤍'}</button>
+    ${r.likes ? `<div class="card-likes-badge">${fmtLikes(r.likes)}</div>` : ''}
     <div class="recipe-card-body">
       <div class="recipe-card-title">${escHtml(r.title)}</div>
       <div class="recipe-card-meta">
@@ -1504,8 +1510,15 @@ function spoonacularToRecipe(item) {
     time:        item.readyInMinutes > 0 ? item.readyInMinutes : null,
     prepTime:    item.preparationMinutes > 0 ? item.preparationMinutes : null,
     servings:    item.servings || null,
+    likes:       item.aggregateLikes || 0,
     _spoonacular: true,
   };
+}
+
+function fmtLikes(n) {
+  if (!n) return '';
+  if (n >= 1000) return `♥ ${(n / 1000).toFixed(1).replace('.0', '')}k`;
+  return `♥ ${n}`;
 }
 
 function exportRecipes() {
