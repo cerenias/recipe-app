@@ -492,7 +492,7 @@ function setFilter(type, val) {
   filters[type] = val;
   maybeCloseFilter();
   updateFilterChips();
-  render();
+  triggerSearch(); // may re-query TheMealDB if filters changed the effective query
 }
 
 function maybeCloseFilter(e) {
@@ -609,13 +609,30 @@ function saveMealDbRecipe(id) {
 }
 
 // ═══════════════════════════════════════════════════
-// Search input handler
+// Search input handler — query is either typed text OR derived from filters
 // ═══════════════════════════════════════════════════
-function onSearchInput() {
-  const query = (document.getElementById('search-input').value || '').trim();
+const PROTEIN_TO_MDB_QUERY = {
+  kyckling: 'chicken', nötkött: 'beef',     fläsk: 'pork',
+  fisk:     'fish',    skaldjur: 'shrimp',  vegetarisk: 'vegetable', vegan: 'vegan',
+};
+const COOKINGTYPE_TO_MDB_QUERY = {
+  ugn: 'baked', panna: 'fried',   airfryer: 'fried',
+  gryta: 'stew', grill: 'grilled', wok: 'stir', kokt: 'boiled',
+};
+
+function getEffectiveQuery() {
+  const typed = (document.getElementById('search-input').value || '').trim();
+  if (typed.length >= 2) return typed;
+  if (filters.protein     && PROTEIN_TO_MDB_QUERY[filters.protein])         return PROTEIN_TO_MDB_QUERY[filters.protein];
+  if (filters.cookingType && COOKINGTYPE_TO_MDB_QUERY[filters.cookingType]) return COOKINGTYPE_TO_MDB_QUERY[filters.cookingType];
+  return '';
+}
+
+function triggerSearch() {
+  const query = getEffectiveQuery();
   clearTimeout(searchDebounce);
 
-  if (query.length < 2) {
+  if (!query) {
     mealDbResults   = [];
     mealDbSearching = false;
     render();
@@ -623,14 +640,16 @@ function onSearchInput() {
   }
 
   mealDbSearching = true;
-  render(); // show loading state immediately
+  render();
 
   searchDebounce = setTimeout(async () => {
     mealDbResults   = await searchMealDb(query);
     mealDbSearching = false;
     render();
-  }, 450);
+  }, 400);
 }
+
+function onSearchInput() { triggerSearch(); }
 
 // ═══════════════════════════════════════════════════
 // Image helpers
@@ -704,12 +723,13 @@ function render() {
   const grid   = document.getElementById('recipe-grid');
   const search = (document.getElementById('search-input').value || '').trim();
   const q      = search.toLowerCase();
+  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime);
 
-  // ── Active search ──
-  if (search.length >= 2) {
+  // ── Search mode: typed search OR filters that triggered a TheMealDB query ──
+  if (search.length >= 2 || hasFilters) {
     if (mealDbSearching) {
       const savedMatches = recipes.filter(r => {
-        if (!r.title.toLowerCase().includes(q)) return false;
+        if (q && !r.title.toLowerCase().includes(q)) return false;
         if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
         if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
         return true;
@@ -728,7 +748,7 @@ function render() {
       return true;
     });
     const savedMatches = recipes.filter(r => {
-      if (!r.title.toLowerCase().includes(q)) return false;
+      if (q && !r.title.toLowerCase().includes(q)) return false;
       if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
       if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
       if (filters.time)    { const max = parseInt(filters.time);    if (r.time     && r.time     > max) return false; }
@@ -748,7 +768,8 @@ function render() {
       html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
     }
     if (!html) {
-      html = `<div class="empty"><div class="big">🔍</div><p>Inga recept hittades för<br>"${escHtml(search)}".</p></div>`;
+      const what = search.length >= 2 ? `"${escHtml(search)}"` : 'aktiva filter';
+      html = `<div class="empty"><div class="big">🔍</div><p>Inga recept hittades för<br>${what}.</p></div>`;
     }
     grid.innerHTML = html;
     return;
