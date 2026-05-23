@@ -1143,10 +1143,8 @@ function render() {
   // ── Filter TheMealDB recipes locally (always — no API call) ──
   const mdbFiltered = allMealDbRecipes.filter(r => applyRecipeFilter(r, q));
 
-  // ── Spoonacular: only shown when user has typed a search term ──
-  const spcFiltered = search.length >= 2
-    ? spoonacularResults.filter(r => applyRecipeFilter(r, q))
-    : [];
+  // ── Spoonacular: shown whenever results exist (triggered by typed search or filter chips) ──
+  const spcFiltered = spoonacularResults.filter(r => applyRecipeFilter(r, q));
 
   // ── Saved recipes: exclude IDs already shown in live sections ──
   const liveIds = new Set([...mdbFiltered, ...spcFiltered].map(r => r.id));
