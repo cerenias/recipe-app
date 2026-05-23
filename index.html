@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Receptfinnaren</title>
+  <title>Recipe Finder</title>
   <style>
     :root {
       --bg: #f5f3ef;
@@ -67,8 +67,10 @@
     /* ── Overlay panel ── */
     #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; }
     #overlay.open { display: flex; }
-    #panel { background: white; width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; overflow-y: auto; padding: 8px 20px 40px; -webkit-overflow-scrolling: touch; }
+    #panel { background: white; width: 100%; max-height: 90vh; border-radius: 20px 20px 0 0; overflow-y: auto; padding: 8px 20px 40px; -webkit-overflow-scrolling: touch; position: relative; }
     .drag-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 16px; }
+    .panel-close { position: sticky; top: 0; float: right; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.55); color: white; border: none; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: -4px -8px 0 0; z-index: 10; font-family: inherit; line-height: 1; }
+    .panel-close:active { background: rgba(0,0,0,0.75); }
     .panel-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
     .panel-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
 
@@ -159,157 +161,157 @@
 
 <!-- ── BROWSE VIEW ── -->
 <div id="view-browse" class="view active">
-  <div class="view-header">🍽 Receptfinnaren</div>
+  <div class="view-header">🍽 Recipe Finder</div>
   <div id="search-wrap">
-    <input id="search-input" type="search" placeholder="Sök recept på TheMealDB eller i sparade..." oninput="onSearchInput()">
+    <input id="search-input" type="search" placeholder="Search TheMealDB or your saved recipes..." oninput="onSearchInput()">
   </div>
   <div id="filter-bar">
-    <button class="filter-chip" data-type="cookingType" onclick="openFilter('cookingType')">Tillagning ▾</button>
+    <button class="filter-chip" data-type="cookingType" onclick="openFilter('cookingType')">Method ▾</button>
     <button class="filter-chip" data-type="protein" onclick="openFilter('protein')">Protein ▾</button>
-    <button class="filter-chip" data-type="time" onclick="openFilter('time')">Tid ▾</button>
-    <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')">Förb. ▾</button>
+    <button class="filter-chip" data-type="time" onclick="openFilter('time')">Time ▾</button>
+    <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')">Prep ▾</button>
   </div>
   <div id="recipe-grid"></div>
 </div>
 
 <!-- ── SHOPPING LIST VIEW ── -->
 <div id="view-shopping" class="view">
-  <div class="view-header">🛒 Inköpslista</div>
+  <div class="view-header">🛒 Shopping List</div>
   <div id="shopping-list-content"></div>
 </div>
 
 <!-- ── ADD / EDIT VIEW ── -->
 <div id="view-add" class="view">
-  <div class="view-header" id="form-header">Lägg till recept</div>
+  <div class="view-header" id="form-header">Add recipe</div>
   <form id="recipe-form" onsubmit="saveRecipe(event)">
     <input type="hidden" id="f-id">
 
     <div class="form-group">
-      <label class="form-label">Receptnamn</label>
-      <input class="form-input" type="text" id="f-title" required placeholder="T.ex. Kycklinggryta med grädde">
+      <label class="form-label">Recipe name</label>
+      <input class="form-input" type="text" id="f-title" required placeholder="e.g. Creamy chicken stew">
     </div>
 
     <div class="form-group">
-      <label class="form-label">URL till recept — klistra in för att hämta automatiskt</label>
+      <label class="form-label">Recipe URL — paste to auto-fetch</label>
       <div style="display:flex;gap:8px;align-items:stretch">
         <input class="form-input" type="url" id="f-url" placeholder="https://www.koket.se/recept/..." style="flex:1;min-width:0">
-        <button type="button" id="fetch-btn" onclick="fetchRecipeFromUrl()" style="padding:0 16px;border-radius:10px;border:1.5px solid var(--accent);background:none;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">Hämta ▶</button>
+        <button type="button" id="fetch-btn" onclick="fetchRecipeFromUrl()" style="padding:0 16px;border-radius:10px;border:1.5px solid var(--accent);background:none;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">Fetch ▶</button>
       </div>
       <div id="fetch-status"></div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Bild-URL (valfritt)</label>
+      <label class="form-label">Image URL (optional)</label>
       <input class="form-input" type="url" id="f-image" placeholder="https://...jpg">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Tillagningstyp</label>
+      <label class="form-label">Cooking method</label>
       <div class="chip-group" id="f-cookingType">
-        <div class="chip" data-val="ugn">🫕 Ugn</div>
-        <div class="chip" data-val="panna">🍳 Panna</div>
-        <div class="chip" data-val="airfryer">💨 Airfryer</div>
-        <div class="chip" data-val="gryta">🍲 Gryta</div>
+        <div class="chip" data-val="ugn">🫕 Oven</div>
+        <div class="chip" data-val="panna">🍳 Pan</div>
+        <div class="chip" data-val="airfryer">💨 Air fryer</div>
+        <div class="chip" data-val="gryta">🍲 Stew</div>
         <div class="chip" data-val="grill">🔥 Grill</div>
         <div class="chip" data-val="wok">🥢 Wok</div>
-        <div class="chip" data-val="kokt">💧 Kokt</div>
+        <div class="chip" data-val="kokt">💧 Boiled</div>
       </div>
     </div>
 
     <div class="form-group">
       <label class="form-label">Protein</label>
       <div class="chip-group" id="f-protein">
-        <div class="chip" data-val="kyckling">🐔 Kyckling</div>
-        <div class="chip" data-val="nötkött">🥩 Nötkött</div>
-        <div class="chip" data-val="fläsk">🐷 Fläsk</div>
-        <div class="chip" data-val="fisk">🐟 Fisk</div>
-        <div class="chip" data-val="skaldjur">🦐 Skaldjur</div>
-        <div class="chip" data-val="vegetarisk">🥦 Vegetarisk</div>
+        <div class="chip" data-val="kyckling">🐔 Chicken</div>
+        <div class="chip" data-val="nötkött">🥩 Beef</div>
+        <div class="chip" data-val="fläsk">🐷 Pork</div>
+        <div class="chip" data-val="fisk">🐟 Fish</div>
+        <div class="chip" data-val="skaldjur">🦐 Seafood</div>
+        <div class="chip" data-val="vegetarisk">🥦 Vegetarian</div>
         <div class="chip" data-val="vegan">🌱 Vegan</div>
       </div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Förberedelsetid (minuter)</label>
+      <label class="form-label">Prep time (minutes)</label>
       <input class="form-input" type="number" id="f-prep" min="0" max="120" placeholder="10">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Tillagningstid totalt (minuter)</label>
+      <label class="form-label">Total cooking time (minutes)</label>
       <input class="form-input" type="number" id="f-time" min="1" max="480" placeholder="30">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Portioner</label>
+      <label class="form-label">Servings</label>
       <input class="form-input" type="number" id="f-servings" min="1" max="20" placeholder="4">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Ingredienser</label>
+      <label class="form-label">Ingredients</label>
       <div style="display:grid;grid-template-columns:1fr 72px 64px 32px;gap:8px;margin-bottom:6px;padding:0 2px">
-        <span style="font-size:11px;color:var(--muted)">Ingrediens</span>
-        <span style="font-size:11px;color:var(--muted)">Mängd</span>
-        <span style="font-size:11px;color:var(--muted)">Enhet</span>
+        <span style="font-size:11px;color:var(--muted)">Ingredient</span>
+        <span style="font-size:11px;color:var(--muted)">Amount</span>
+        <span style="font-size:11px;color:var(--muted)">Unit</span>
         <span></span>
       </div>
       <div id="ingredients-editor"></div>
-      <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addIngredientRow()">+ Ingrediens</button>
+      <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addIngredientRow()">+ Ingredient</button>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Tillagningsinstruktioner (ett steg per rad)</label>
-      <textarea class="form-input" id="f-instructions" rows="6" placeholder="Sätt ugnen på 200°C.&#10;Krydda kycklingen med salt och peppar.&#10;Grädda i 30 minuter." style="resize:vertical;line-height:1.5"></textarea>
+      <label class="form-label">Cooking instructions (one step per line)</label>
+      <textarea class="form-input" id="f-instructions" rows="6" placeholder="Preheat oven to 200°C.&#10;Season the chicken with salt and pepper.&#10;Bake for 30 minutes." style="resize:vertical;line-height:1.5"></textarea>
     </div>
 
     <div class="divider"></div>
-    <button type="submit" class="btn btn-primary" id="submit-btn">Spara recept</button>
-    <button type="button" class="btn btn-secondary btn-danger" id="delete-btn" style="display:none" onclick="deleteRecipe()">Ta bort recept</button>
+    <button type="submit" class="btn btn-primary" id="submit-btn">Save recipe</button>
+    <button type="button" class="btn btn-secondary btn-danger" id="delete-btn" style="display:none" onclick="deleteRecipe()">Delete recipe</button>
   </form>
 </div>
 
 <!-- ── SETTINGS VIEW ── -->
 <div id="view-settings" class="view">
-  <div class="view-header">⚙️ Inställningar</div>
+  <div class="view-header">⚙️ Settings</div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Willys Worker-URL</div>
-    <div class="settings-card-desc">För gröna tillgänglighetsbadgar i appen behöver du en Cloudflare Worker. Utan Worker kan du fortfarande klicka på en ingrediens för att öppna Willys-sökning i webbläsaren.</div>
-    <input class="mono-input" id="worker-url-input" type="url" placeholder="https://ditt-worker.workers.dev">
-    <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveWorkerUrl()">Spara URL</button>
+    <div class="settings-card-title">Willys Worker URL</div>
+    <div class="settings-card-desc">For green availability badges in the app you need a Cloudflare Worker. Without a Worker you can still tap an ingredient to open a Willys search in your browser.</div>
+    <input class="mono-input" id="worker-url-input" type="url" placeholder="https://your-worker.workers.dev">
+    <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveWorkerUrl()">Save URL</button>
   </div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Exportera recept</div>
-    <div class="settings-card-desc">Ladda ner alla recept som JSON-fil (backup till GitHub).</div>
-    <button class="btn btn-secondary" onclick="exportRecipes()">⬇ Exportera JSON</button>
+    <div class="settings-card-title">Export recipes</div>
+    <div class="settings-card-desc">Download all your recipes as a JSON file (backup to GitHub).</div>
+    <button class="btn btn-secondary" onclick="exportRecipes()">⬇ Export JSON</button>
   </div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Importera recept</div>
-    <div class="settings-card-desc">Läs in en tidigare exporterad JSON-fil.</div>
+    <div class="settings-card-title">Import recipes</div>
+    <div class="settings-card-desc">Load a previously exported JSON file.</div>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importRecipes(event)">
-    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Importera JSON</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Import JSON</button>
   </div>
 
   <div class="settings-card" style="font-size:13px;color:var(--muted);line-height:1.5">
-    <div class="settings-card-title">Om appen</div>
-    Receptfinnaren · Recept sparas lokalt i din webbläsare (localStorage). Exportera JSON regelbundet som backup.
+    <div class="settings-card-title">About</div>
+    Recipe Finder · Recipes are saved locally in your browser (localStorage). Export JSON regularly as a backup.
   </div>
 </div>
 
 <!-- ── BOTTOM NAV ── -->
 <nav id="nav">
   <button class="nav-btn active" id="nav-browse" onclick="showView('browse')">
-    <span class="nav-icon">🍽</span>Recept
+    <span class="nav-icon">🍽</span>Recipes
   </button>
   <button class="nav-btn" id="nav-shopping" onclick="showView('shopping')">
-    <span class="nav-icon">🛒</span>Inköpslista
+    <span class="nav-icon">🛒</span>Shopping
   </button>
   <button class="nav-btn" id="nav-add" onclick="showAddForm(null)">
-    <span class="nav-icon">➕</span>Lägg till
+    <span class="nav-icon">➕</span>Add
   </button>
   <button class="nav-btn" id="nav-settings" onclick="showView('settings')">
-    <span class="nav-icon">⚙️</span>Inställningar
+    <span class="nav-icon">⚙️</span>Settings
   </button>
 </nav>
 
@@ -341,37 +343,37 @@ const STORAGE_KEY = 'receptfinnaren_v1';
 const SHOPPING_KEY = 'receptfinnaren_shopping_v1';
 
 const COOKING_TYPES = [
-  { val: 'ugn',      label: '🫕 Ugn' },
-  { val: 'panna',    label: '🍳 Panna' },
-  { val: 'airfryer', label: '💨 Airfryer' },
-  { val: 'gryta',    label: '🍲 Gryta' },
+  { val: 'ugn',      label: '🫕 Oven' },
+  { val: 'panna',    label: '🍳 Pan' },
+  { val: 'airfryer', label: '💨 Air fryer' },
+  { val: 'gryta',    label: '🍲 Stew' },
   { val: 'grill',    label: '🔥 Grill' },
   { val: 'wok',      label: '🥢 Wok' },
-  { val: 'kokt',     label: '💧 Kokt' },
+  { val: 'kokt',     label: '💧 Boiled' },
 ];
 
 const PROTEINS = [
-  { val: 'kyckling',   label: '🐔 Kyckling' },
-  { val: 'nötkött',   label: '🥩 Nötkött' },
-  { val: 'fläsk',     label: '🐷 Fläsk' },
-  { val: 'fisk',      label: '🐟 Fisk' },
-  { val: 'skaldjur',  label: '🦐 Skaldjur' },
-  { val: 'vegetarisk',label: '🥦 Vegetarisk' },
+  { val: 'kyckling',   label: '🐔 Chicken' },
+  { val: 'nötkött',   label: '🥩 Beef' },
+  { val: 'fläsk',     label: '🐷 Pork' },
+  { val: 'fisk',      label: '🐟 Fish' },
+  { val: 'skaldjur',  label: '🦐 Seafood' },
+  { val: 'vegetarisk',label: '🥦 Vegetarian' },
   { val: 'vegan',     label: '🌱 Vegan' },
 ];
 
 const TIME_OPTIONS = [
   { val: '15',  label: '⚡ Under 15 min' },
   { val: '30',  label: '🕒 Under 30 min' },
-  { val: '60',  label: '⏱ Under 1 timme' },
-  { val: '999', label: '🕰 Alla tider' },
+  { val: '60',  label: '⏱ Under 1 hour' },
+  { val: '999', label: '🕰 Any time' },
 ];
 
 const PREP_OPTIONS = [
-  { val: '5',  label: '⚡ Max 5 min förb.' },
-  { val: '10', label: '🕒 Max 10 min förb.' },
-  { val: '15', label: '⏱ Max 15 min förb.' },
-  { val: '999', label: '🕰 Alla' },
+  { val: '5',  label: '⚡ Max 5 min prep' },
+  { val: '10', label: '🕒 Max 10 min prep' },
+  { val: '15', label: '⏱ Max 15 min prep' },
+  { val: '999', label: '🕰 Any' },
 ];
 
 const KNOWN_SITES = {
@@ -436,12 +438,12 @@ function showAddForm(recipe) {
   // Reset
   document.getElementById('recipe-form').reset();
   document.getElementById('fetch-status').textContent = '';
-  document.getElementById('fetch-btn').textContent = 'Hämta ▶';
+  document.getElementById('fetch-btn').textContent = 'Fetch ▶';
   document.getElementById('fetch-btn').disabled = false;
   document.querySelectorAll('#f-cookingType .chip, #f-protein .chip').forEach(c => c.classList.remove('selected'));
 
   if (recipe) {
-    document.getElementById('form-header').textContent = 'Redigera recept';
+    document.getElementById('form-header').textContent = 'Edit recipe';
     document.getElementById('f-id').value = recipe.id;
     document.getElementById('f-title').value = recipe.title;
     document.getElementById('f-url').value = recipe.url;
@@ -450,7 +452,7 @@ function showAddForm(recipe) {
     document.getElementById('f-image').value = recipe.image || '';
     document.getElementById('f-instructions').value = (recipe.instructions || []).join('\n');
     document.getElementById('f-servings').value = recipe.servings || '';
-    document.getElementById('submit-btn').textContent = 'Uppdatera recept';
+    document.getElementById('submit-btn').textContent = 'Update recipe';
     document.getElementById('delete-btn').style.display = 'block';
     (recipe.cookingType || []).forEach(v => {
       const c = document.querySelector(`#f-cookingType .chip[data-val="${v}"]`);
@@ -462,9 +464,9 @@ function showAddForm(recipe) {
     });
     renderIngredientEditor(recipe.ingredients || []);
   } else {
-    document.getElementById('form-header').textContent = 'Lägg till recept';
+    document.getElementById('form-header').textContent = 'Add recipe';
     document.getElementById('f-id').value = '';
-    document.getElementById('submit-btn').textContent = 'Spara recept';
+    document.getElementById('submit-btn').textContent = 'Save recipe';
     document.getElementById('delete-btn').style.display = 'none';
     renderIngredientEditor([]);
   }
@@ -474,11 +476,11 @@ function showAddForm(recipe) {
 // Filter logic
 // ═══════════════════════════════════════════════════
 function openFilter(type) {
-  const cfg = { cookingType: { label: 'Tillagning', opts: COOKING_TYPES }, protein: { label: 'Protein', opts: PROTEINS }, time: { label: 'Tid', opts: TIME_OPTIONS }, prepTime: { label: 'Förberedelsetid', opts: PREP_OPTIONS } }[type];
+  const cfg = { cookingType: { label: 'Cooking method', opts: COOKING_TYPES }, protein: { label: 'Protein', opts: PROTEINS }, time: { label: 'Time', opts: TIME_OPTIONS }, prepTime: { label: 'Prep time', opts: PREP_OPTIONS } }[type];
   const current = filters[type];
 
   let html = `<div class="filter-modal-title">${cfg.label}</div><div class="chip-group">`;
-  html += `<div class="chip ${!current ? 'selected' : ''}" onclick="setFilter('${type}', null)">Alla</div>`;
+  html += `<div class="chip ${!current ? 'selected' : ''}" onclick="setFilter('${type}', null)">All</div>`;
   cfg.opts.forEach(o => {
     html += `<div class="chip ${current === o.val ? 'selected' : ''}" onclick="setFilter('${type}','${o.val}')">${o.label}</div>`;
   });
@@ -502,7 +504,7 @@ function maybeCloseFilter(e) {
 }
 
 function updateFilterChips() {
-  const defaults = { cookingType: 'Tillagning', protein: 'Protein', time: 'Tid', prepTime: 'Förb.' };
+  const defaults = { cookingType: 'Method', protein: 'Protein', time: 'Time', prepTime: 'Prep' };
   const allOpts = { cookingType: COOKING_TYPES, protein: PROTEINS, time: TIME_OPTIONS, prepTime: PREP_OPTIONS };
 
   Object.keys(defaults).forEach(type => {
@@ -598,14 +600,26 @@ function mealDbToRecipe(meal) {
 function saveMealDbRecipe(id) {
   const r = mealDbResults.find(x => x.id === id);
   if (!r) return;
-  if (recipes.some(x => x.id === id)) { showToast('Redan sparat!'); openRecipe(id); return; }
+  if (recipes.some(x => x.id === id)) { showToast('Already saved!'); openRecipe(id); return; }
   const toSave = { ...r };
   delete toSave._mealdb;
   recipes.unshift(toSave);
   saveData();
-  showToast('Recept sparat! 🎉');
+  showToast('Recipe saved! 🎉');
   openRecipe(id); // re-open so shopping buttons appear
   render();
+}
+
+// Auto-save a MealDB recipe to user's collection (used when adding ingredients without explicit save)
+function ensureSaved(id) {
+  if (recipes.some(x => x.id === id)) return true;
+  const r = mealDbResults.find(x => x.id === id);
+  if (!r) return false;
+  const toSave = { ...r };
+  delete toSave._mealdb;
+  recipes.unshift(toSave);
+  saveData();
+  return true;
 }
 
 // ═══════════════════════════════════════════════════
@@ -710,7 +724,7 @@ function recipeCardHtml(r, onclick) {
       <div class="recipe-card-title">${escHtml(r.title)}</div>
       <div class="recipe-card-meta">
         ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-        ${r._mealdb ? `<span class="tag unsaved">＋ Spara</span>` : ''}
+        ${r._mealdb ? `<span class="tag unsaved">＋ Save</span>` : ''}
         ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min</span>` : ''}
         ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
         ${ctTags}${pTags}
@@ -734,7 +748,7 @@ function render() {
         if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
         return true;
       });
-      let html = `<div class="grid-section-label">Söker på TheMealDB… ⏳</div>`;
+      let html = `<div class="grid-section-label">Searching TheMealDB… ⏳</div>`;
       html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
       grid.innerHTML = html;
       return;
@@ -759,17 +773,17 @@ function render() {
     let html = '';
     if (mdbFiltered.length) {
       const note = filters.time || filters.prepTime
-        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(tid-filter gäller ej TheMealDB)</span>` : '';
-      html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} recept${note}</div>`;
+        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(time filters don't apply to TheMealDB)</span>` : '';
+      html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} recipes${note}</div>`;
       html += mdbFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
     }
     if (savedMatches.length) {
-      html += `<div class="grid-section-label">Dina sparade recept</div>`;
+      html += `<div class="grid-section-label">Your saved recipes</div>`;
       html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
     }
     if (!html) {
-      const what = search.length >= 2 ? `"${escHtml(search)}"` : 'aktiva filter';
-      html = `<div class="empty"><div class="big">🔍</div><p>Inga recept hittades för<br>${what}.</p></div>`;
+      const what = search.length >= 2 ? `"${escHtml(search)}"` : 'active filters';
+      html = `<div class="empty"><div class="big">🔍</div><p>No recipes found for<br>${what}.</p></div>`;
     }
     grid.innerHTML = html;
     return;
@@ -786,7 +800,7 @@ function render() {
 
   if (visible.length === 0) {
     grid.innerHTML = `<div class="empty"><div class="big">🍽</div>
-      <p>Inga sparade recept ännu.<br>Sök efter recept ovan eller<br>lägg till via URL på <strong>+</strong> fliken.</p></div>`;
+      <p>No saved recipes yet.<br>Search above or add one<br>from a URL on the <strong>+</strong> tab.</p></div>`;
     return;
   }
 
@@ -825,61 +839,52 @@ function openRecipe(id) {
 
   let ingsHtml = '';
   if (r.ingredients && r.ingredients.length > 0) {
-    const label = `Ingredienser${r.servings ? ' (' + r.servings + ' port.)' : ''}`;
-    if (isSaved) {
-      const allAdded = r.ingredients.every(ing =>
-        shoppingList.some(s => s.recipeId === r.id && s.name === ing.name)
-      );
-      ingsHtml = `
-        <div class="section-title">${label}</div>
-        ${r.ingredients.map((ing, i) => {
-          const added = shoppingList.some(s => s.recipeId === r.id && s.name === ing.name);
-          return `<div class="ingredient-row">
-            <span class="ingredient-name">${escHtml(ing.name)}</span>
-            <span class="ingredient-amount">${escHtml(ing.amount || '')} ${escHtml(ing.unit || '')}</span>
-            <button class="add-to-list-btn ${added ? 'added' : ''}"
-              id="ing-btn-${r.id}-${i}"
-              onclick="toggleShoppingItem('${r.id}',${i})">
-              ${added ? '✓ Tillagd' : '+ Lista'}
-            </button>
-          </div>`;
-        }).join('')}
-        <button class="btn btn-secondary" style="margin-top:14px" onclick="addAllIngredients('${r.id}')">
-          ${allAdded ? '✓ Alla på listan' : '🛒 Lägg till alla på inköpslista'}
-        </button>`;
-    } else {
-      // Unsaved MealDB recipe — list only, no shopping buttons
-      ingsHtml = `
-        <div class="section-title">${label}</div>
-        ${r.ingredients.map(ing => `<div class="ingredient-row">
+    const label = `Ingredients${r.servings ? ' (' + r.servings + ' servings)' : ''}`;
+    // Shopping buttons always shown — auto-saves the MealDB recipe on first add
+    const allAdded = r.ingredients.every(ing =>
+      shoppingList.some(s => s.recipeId === r.id && s.name === ing.name)
+    );
+    ingsHtml = `
+      <div class="section-title">${label}</div>
+      ${r.ingredients.map((ing, i) => {
+        const added = shoppingList.some(s => s.recipeId === r.id && s.name === ing.name);
+        return `<div class="ingredient-row">
           <span class="ingredient-name">${escHtml(ing.name)}</span>
           <span class="ingredient-amount">${escHtml(ing.amount || '')} ${escHtml(ing.unit || '')}</span>
-        </div>`).join('')}
-        <p style="font-size:13px;color:var(--muted);margin-top:10px">Spara receptet för att lägga ingredienser på inköpslistan.</p>`;
-    }
+          <button class="add-to-list-btn ${added ? 'added' : ''}"
+            id="ing-btn-${r.id}-${i}"
+            onclick="toggleShoppingItem('${r.id}',${i})">
+            ${added ? '✓ Added' : '+ List'}
+          </button>
+        </div>`;
+      }).join('')}
+      <button class="btn btn-secondary" style="margin-top:14px" onclick="addAllIngredients('${r.id}')">
+        ${allAdded ? '✓ All on list' : '🛒 Add all to shopping list'}
+      </button>`;
   }
 
   const instructionsHtml = (r.instructions && r.instructions.length) ? `
-    <div class="section-title">Tillagning</div>
+    <div class="section-title">Instructions</div>
     <ol class="instructions-list">
       ${r.instructions.map(step => `<li>${escHtml(step)}</li>`).join('')}
     </ol>` : '';
 
-  const actionsHtml = isSaved
-    ? `<div style="margin-top:18px">
-        ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn btn-primary">Öppna originalrecept ↗</a>` : ''}
-        <button class="btn btn-secondary" onclick="closePanel();showAddForm(recipes.find(x=>x.id==='${r.id}'))">✏️ Redigera</button>
-      </div>`
-    : `<button class="btn btn-primary" style="margin-top:18px" onclick="saveMealDbRecipe('${r.id}')">💾 Spara recept</button>`;
+  const actionsHtml = `<div style="margin-top:18px">
+    ${!isSaved ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">💾 Save to my recipes</button>` : ''}
+    ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn ${isSaved ? 'btn-primary' : 'btn-secondary'}">Open original recipe ↗</a>` : ''}
+    ${isSaved ? `<button class="btn btn-secondary" onclick="closePanel();showAddForm(recipes.find(x=>x.id==='${r.id}'))">✏️ Edit</button>` : ''}
+  </div>`;
 
   document.getElementById('panel-content').innerHTML = `
+    <button class="panel-close" onclick="closePanel()" aria-label="Close">✕</button>
     ${panelVisualHtml(r)}
     <div class="panel-title">${escHtml(r.title)}</div>
     <div class="panel-meta">
       ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-      ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min förb.</span>` : ''}
-      ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)} totalt</span>` : ''}
-      ${r.servings ? `<span class="tag">👥 ${r.servings} port.</span>` : ''}
+      ${!isSaved ? `<span class="tag unsaved">＋ Save</span>` : ''}
+      ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min prep</span>` : ''}
+      ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)} total</span>` : ''}
+      ${r.servings ? `<span class="tag">👥 ${r.servings} servings</span>` : ''}
       ${ctTags}${pTags}
     </div>
     ${ingsHtml}
@@ -900,7 +905,10 @@ function maybeClosePanel(e) {
 // Shopping list
 // ═══════════════════════════════════════════════════
 function toggleShoppingItem(recipeId, ingIndex) {
-  const r = allRecipes().find(x => x.id === recipeId);
+  // Auto-save the recipe to your collection if it's still a MealDB-only result
+  ensureSaved(recipeId);
+
+  const r = recipes.find(x => x.id === recipeId);
   if (!r) return;
   const ing = r.ingredients[ingIndex];
   if (!ing) return;
@@ -908,33 +916,34 @@ function toggleShoppingItem(recipeId, ingIndex) {
   const idx = shoppingList.findIndex(s => s.recipeId === recipeId && s.name === ing.name);
   if (idx >= 0) {
     shoppingList.splice(idx, 1);
-    showToast('Borttagen från inköpslistan');
+    showToast('Removed from shopping list');
   } else {
     shoppingList.push({ id: uid(), recipeId, name: ing.name, amount: ing.amount, unit: ing.unit, checked: false, willyStatus: 'unknown' });
-    showToast('Tillagd på inköpslistan!');
+    showToast('Added to shopping list!');
   }
   saveData();
 
   const btn = document.getElementById(`ing-btn-${recipeId}-${ingIndex}`);
   if (btn) {
     const added = shoppingList.some(s => s.recipeId === recipeId && s.name === ing.name);
-    btn.textContent = added ? '✓ Tillagd' : '+ Lista';
+    btn.textContent = added ? '✓ Added' : '+ List';
     btn.classList.toggle('added', added);
   }
 }
 
 function addAllIngredients(recipeId) {
-  const r = allRecipes().find(x => x.id === recipeId);
+  ensureSaved(recipeId);
+  const r = recipes.find(x => x.id === recipeId);
   if (!r || !r.ingredients) return;
   let added = 0;
-  r.ingredients.forEach((ing, i) => {
+  r.ingredients.forEach((ing) => {
     if (!shoppingList.some(s => s.recipeId === recipeId && s.name === ing.name)) {
       shoppingList.push({ id: uid(), recipeId, name: ing.name, amount: ing.amount, unit: ing.unit, checked: false, willyStatus: 'unknown' });
       added++;
     }
   });
   saveData();
-  showToast(added > 0 ? `${added} ingredienser tillagda!` : 'Alla redan på listan');
+  showToast(added > 0 ? `${added} ingredients added!` : 'All already on list');
   openRecipe(recipeId);
 }
 
@@ -956,7 +965,7 @@ function clearChecked() {
 }
 
 function clearAll() {
-  if (confirm('Rensa hela inköpslistan?')) {
+  if (confirm('Clear the entire shopping list?')) {
     shoppingList = [];
     saveData();
     renderShopping();
@@ -966,23 +975,23 @@ function clearAll() {
 function renderShopping() {
   const el = document.getElementById('shopping-list-content');
   if (shoppingList.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="big">🛒</div><p>Inköpslistan är tom.<br>Öppna ett recept och tryck<br>"Lägg till alla på inköpslista".</p></div>`;
+    el.innerHTML = `<div class="empty"><div class="big">🛒</div><p>Shopping list is empty.<br>Open a recipe and tap<br>"Add all to shopping list".</p></div>`;
     return;
   }
 
   const unchecked = shoppingList.filter(s => !s.checked);
   const checked   = shoppingList.filter(s =>  s.checked);
 
-  let html = `<button class="willys-check-btn" onclick="checkAllWillys()">🟢 Kolla tillgänglighet på Willys</button>`;
+  let html = `<button class="willys-check-btn" onclick="checkAllWillys()">🟢 Check Willys availability</button>`;
   html += unchecked.map(shoppingRowHtml).join('');
 
   if (checked.length > 0) {
-    html += `<div class="shopping-section-label">Klart (${checked.length})</div>`;
+    html += `<div class="shopping-section-label">Done (${checked.length})</div>`;
     html += checked.map(shoppingRowHtml).join('');
-    html += `<button class="btn btn-secondary" style="margin-top:12px" onclick="clearChecked()">Rensa klara</button>`;
+    html += `<button class="btn btn-secondary" style="margin-top:12px" onclick="clearChecked()">Clear done</button>`;
   }
 
-  html += `<button class="btn btn-secondary btn-danger" style="margin-top:8px" onclick="clearAll()">Rensa hela listan</button>`;
+  html += `<button class="btn btn-secondary btn-danger" style="margin-top:8px" onclick="clearAll()">Clear entire list</button>`;
   el.innerHTML = html;
 }
 
@@ -991,7 +1000,7 @@ function shoppingRowHtml(item) {
   let badge;
   if      (item.willyStatus === 'available')   badge = `<button class="willys-badge available"   onclick="openWillys('${encoded}')">✅ Willys</button>`;
   else if (item.willyStatus === 'unavailable') badge = `<button class="willys-badge unavailable" onclick="openWillys('${encoded}')">❌ Willys</button>`;
-  else if (item.willyStatus === 'checking')    badge = `<button class="willys-badge checking"    disabled>⏳ Kollar…</button>`;
+  else if (item.willyStatus === 'checking')    badge = `<button class="willys-badge checking"    disabled>⏳ Checking…</button>`;
   else                                          badge = `<button class="willys-badge unknown"     onclick="openWillys('${encoded}')">Willys?</button>`;
 
   return `<div class="shopping-item ${item.checked ? 'checked' : ''}" id="si-${item.id}">
@@ -1043,17 +1052,17 @@ async function fetchRecipeFromUrl() {
   const statusEl  = document.getElementById('fetch-status');
   const btn       = document.getElementById('fetch-btn');
 
-  if (!url) { showToast('Klistra in en URL först'); return; }
+  if (!url) { showToast('Paste a URL first'); return; }
   if (!workerUrl) {
-    statusEl.textContent  = '⚠️ Ange Worker-URL i Inställningar först.';
+    statusEl.textContent  = '⚠️ Set Worker URL in Settings first.';
     statusEl.style.color  = 'var(--danger)';
     return;
   }
 
-  btn.textContent = '⏳ Hämtar…';
+  btn.textContent = '⏳ Fetching…';
   btn.disabled    = true;
   statusEl.style.color   = 'var(--muted)';
-  statusEl.textContent   = 'Hämtar receptdata från sidan…';
+  statusEl.textContent   = 'Fetching recipe data from the page…';
 
   try {
     const res  = await fetch(`${workerUrl}?url=${encodeURIComponent(url)}`);
@@ -1075,13 +1084,13 @@ async function fetchRecipeFromUrl() {
     if (data.ingredients && data.ingredients.length)
       renderIngredientEditor(data.ingredients);
 
-    statusEl.textContent = '✅ Hämtat! Granska och välj tillagningstyp, sedan Spara.';
+    statusEl.textContent = '✅ Fetched! Review, pick a cooking method, then Save.';
     statusEl.style.color = 'var(--accent)';
   } catch {
-    statusEl.textContent = '⚠️ Något gick fel. Kontrollera Worker-URL i Inställningar.';
+    statusEl.textContent = '⚠️ Something went wrong. Check the Worker URL in Settings.';
     statusEl.style.color = 'var(--danger)';
   } finally {
-    btn.textContent = 'Hämta ▶';
+    btn.textContent = 'Fetch ▶';
     btn.disabled    = false;
   }
 }
@@ -1101,9 +1110,9 @@ function addIngredientRow(ing) {
   const row = document.createElement('div');
   row.className = 'ing-row';
   row.innerHTML = `
-    <input class="form-input ing-name"   type="text" placeholder="Ingrediens" value="${ing ? escHtml(ing.name) : ''}">
-    <input class="form-input ing-amount" type="text" placeholder="Mängd"      value="${ing ? escHtml(ing.amount) : ''}">
-    <input class="form-input ing-unit"   type="text" placeholder="Enhet"      value="${ing ? escHtml(ing.unit) : ''}">
+    <input class="form-input ing-name"   type="text" placeholder="Ingredient" value="${ing ? escHtml(ing.name) : ''}">
+    <input class="form-input ing-amount" type="text" placeholder="Amount"     value="${ing ? escHtml(ing.amount) : ''}">
+    <input class="form-input ing-unit"   type="text" placeholder="Unit"       value="${ing ? escHtml(ing.unit) : ''}">
     <button type="button" class="remove-ing-btn" onclick="this.parentElement.remove()">×</button>`;
   el.appendChild(row);
 }
@@ -1147,8 +1156,8 @@ function saveRecipe(e) {
   };
 
   const idx = recipes.findIndex(r => r.id === id);
-  if (idx >= 0) { recipes[idx] = recipe; showToast('Recept uppdaterat!'); }
-  else          { recipes.unshift(recipe); showToast('Recept sparat!'); }
+  if (idx >= 0) { recipes[idx] = recipe; showToast('Recipe updated!'); }
+  else          { recipes.unshift(recipe); showToast('Recipe saved!'); }
 
   saveData();
   showView('browse');
@@ -1156,11 +1165,11 @@ function saveRecipe(e) {
 
 function deleteRecipe() {
   const id = document.getElementById('f-id').value;
-  if (!id || !confirm('Ta bort receptet?')) return;
+  if (!id || !confirm('Delete this recipe?')) return;
   recipes = recipes.filter(r => r.id !== id);
   shoppingList = shoppingList.filter(s => s.recipeId !== id);
   saveData();
-  showToast('Recept borttaget');
+  showToast('Recipe deleted');
   showView('browse');
 }
 
@@ -1170,14 +1179,14 @@ function deleteRecipe() {
 function saveWorkerUrl() {
   workerUrl = document.getElementById('worker-url-input').value.trim();
   localStorage.setItem('workerUrl', workerUrl);
-  showToast('Worker-URL sparad!');
+  showToast('Worker URL saved!');
 }
 
 function exportRecipes() {
   const blob = new Blob([JSON.stringify(recipes, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'receptfinnaren-backup.json';
+  a.download = 'recipe-finder-backup.json';
   a.click();
 }
 
@@ -1193,9 +1202,9 @@ function importRecipes(e) {
       recipes.forEach(r => { if (!merged.some(m => m.id === r.id)) merged.push(r); });
       recipes = merged;
       saveData();
-      showToast(`${imported.length} recept importerade!`);
+      showToast(`${imported.length} recipes imported!`);
       showView('browse');
-    } catch { alert('Ogiltig JSON-fil'); }
+    } catch { alert('Invalid JSON file'); }
   };
   reader.readAsText(file);
   e.target.value = '';
