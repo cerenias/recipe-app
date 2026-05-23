@@ -902,16 +902,12 @@ function toggleFavourite(id, refreshPanel = false) {
   r.favourite = !r.favourite;
   saveData();
   showToast(r.favourite ? '❤️ Added to favourites' : 'Removed from favourites');
-  if (refreshPanel) {
-    openRecipe(id); // refresh the open recipe panel
-  } else {
-    // Update only the heart button(s) in-place — no full re-render
-    document.querySelectorAll(`.card-fav-badge[data-id="${id}"]`).forEach(btn => {
-      btn.textContent = r.favourite ? '❤️' : '🤍';
-      btn.setAttribute('aria-label', r.favourite ? 'Remove from favourites' : 'Add to favourites');
-    });
-    // Note: if on Favourites tab, card stays visible with empty heart until user navigates away
-  }
+  // Always update card hearts in-place across all visible grids
+  document.querySelectorAll(`.card-fav-badge[data-id="${id}"]`).forEach(btn => {
+    btn.textContent = r.favourite ? '❤️' : '🤍';
+    btn.setAttribute('aria-label', r.favourite ? 'Remove from favourites' : 'Add to favourites');
+  });
+  if (refreshPanel) openRecipe(id); // also refresh the open recipe panel
 }
 
 function renderFavourites() {
