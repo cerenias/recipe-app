@@ -533,6 +533,39 @@ async function searchMealDb(query) {
   } catch { return []; }
 }
 
+function inferCookingType(title, instructions) {
+  const text = (title + ' ' + instructions.join(' ')).toLowerCase();
+  const types = new Set();
+
+  // Air fryer (specific — check first)
+  if (/\bair[- ]?fry(er)?\b/.test(text)) types.add('airfryer');
+
+  // Oven (ugn) — strong signals: preheat, bake, roast, baking dish
+  if (/\b(preheat (the )?oven|in the oven|bake (for|in|at|until)|baked|baking (sheet|dish|tray|pan)|roast(ed|ing)? (for|in|at|until)|casserole dish)\b/.test(text)) types.add('ugn');
+
+  // Wok / stir-fry
+  if (/\b(stir[- ]?fr(y|ied|ying)|in (a |the )?wok)\b/.test(text)) types.add('wok');
+
+  // Grill / barbecue / broil
+  if (/\b(grill(ed|ing)?|barbecue|bbq|broil(ed|ing)?|on the grill)\b/.test(text)) types.add('grill');
+
+  // Stew / braise / slow-cook → gryta
+  if (/\b(stew(ed|ing)?|braise(d|ing)?|in a (dutch oven|large pot|deep pot|saucepan for \d+ (hour|minute))|slow[- ]?cook|simmer(ed|ing)? for (\d{2,}|one|two|three) (hour|minute))\b/.test(text)) types.add('gryta');
+
+  // Pan / skillet / sauté → panna
+  if (/\b(skillet|frying pan|pan[- ]?fr(y|ied|ying)|saut[ée](ed|ing)?|in a (large |hot |non[- ]?stick )?pan)\b/.test(text)) types.add('panna');
+
+  // Boiled (only when water is main cooking medium for the protein/staple)
+  if (!types.has('gryta') && /\b(boil(ed|ing)? (the )?(eggs?|potatoes?|rice|pasta|noodles?|lentils?|beans?)|hard[- ]?boil)\b/.test(text)) {
+    types.add('kokt');
+  }
+
+  // Weak fallback: just "fry" found
+  if (types.size === 0 && /\bfr(y|ied|ying)\b/.test(text)) types.add('panna');
+
+  return [...types];
+}
+
 function mealDbToRecipe(meal) {
   const ingredients = [];
   for (let i = 1; i <= 20; i++) {
@@ -554,7 +587,7 @@ function mealDbToRecipe(meal) {
     image:       meal.strMealThumb,
     site:        meal.strArea || 'TheMealDB',
     url:         meal.strSource || '',
-    cookingType: [],
+    cookingType: inferCookingType(meal.strMeal, instructions),
     protein:     proteinMap[meal.strCategory] ? [proteinMap[meal.strCategory]] : [],
     ingredients,
     instructions,
@@ -689,8 +722,9 @@ function render() {
 
     // Apply filters where we have data
     const mdbFiltered = mealDbResults.filter(r => {
-      // TheMealDB has protein (from category) but not cookingType/time — only filter what we know
-      if (filters.protein && !(r.protein || []).includes(filters.protein)) return false;
+      // TheMealDB: protein from category, cookingType inferred from instructions, no time data
+      if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
+      if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
       return true;
     });
     const savedMatches = recipes.filter(r => {
@@ -704,8 +738,8 @@ function render() {
 
     let html = '';
     if (mdbFiltered.length) {
-      const note = filters.cookingType || filters.time || filters.prepTime
-        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(Tillagning/tid-filter gäller ej TheMealDB)</span>` : '';
+      const note = filters.time || filters.prepTime
+        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(tid-filter gäller ej TheMealDB)</span>` : '';
       html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} recept${note}</div>`;
       html += mdbFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
     }
