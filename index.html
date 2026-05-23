@@ -873,7 +873,7 @@ function recipeCardHtml(r, onclick) {
   const isFav = isFavourite(r.id);
   return `<div class="recipe-card" onclick="${onclick}">
     ${cardVisualHtml(r)}
-    <button class="card-fav-badge" onclick="event.stopPropagation();toggleFavourite('${r.id}')" aria-label="${isFav ? 'Remove from favourites' : 'Add to favourites'}">${isFav ? '❤️' : '🤍'}</button>
+    <button class="card-fav-badge" data-id="${r.id}" onclick="event.stopPropagation();toggleFavourite('${r.id}')" aria-label="${isFav ? 'Remove from favourites' : 'Add to favourites'}">${isFav ? '❤️' : '🤍'}</button>
     ${r.likes ? `<div class="card-likes-badge">${fmtLikes(r.likes)}</div>` : ''}
     <div class="recipe-card-body">
       <div class="recipe-card-title">${escHtml(r.title)}</div>
@@ -900,8 +900,18 @@ function toggleFavourite(id, refreshPanel = false) {
   r.favourite = !r.favourite;
   saveData();
   showToast(r.favourite ? '❤️ Added to favourites' : 'Removed from favourites');
-  if (refreshPanel) openRecipe(id); // refresh panel heart button
-  render();
+  if (refreshPanel) {
+    openRecipe(id); // refresh the open recipe panel
+  } else {
+    // Update only the heart button(s) in-place — no full re-render
+    document.querySelectorAll(`.card-fav-badge[data-id="${id}"]`).forEach(btn => {
+      btn.textContent = r.favourite ? '❤️' : '🤍';
+      btn.setAttribute('aria-label', r.favourite ? 'Remove from favourites' : 'Add to favourites');
+    });
+    // If on the Favourites tab, re-render it so the card appears/disappears
+    const favView = document.getElementById('view-favourites');
+    if (favView && favView.classList.contains('active')) renderFavourites();
+  }
 }
 
 function renderFavourites() {
