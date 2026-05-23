@@ -1238,7 +1238,7 @@ function openRecipe(id) {
       ${r.ingredients.map((ing, i) => {
         const added = shoppingList.some(s => s.recipeId === r.id && s.name === ing.name);
         return `<div class="ingredient-row">
-          <span class="ingredient-name">${escHtml(ing.name)}</span>
+          <span class="ingredient-name">${escHtml(translateIngredient(ing.name))}</span>
           <span class="ingredient-amount">${escHtml(ing.amount || '')} ${escHtml(ing.unit || '')}</span>
           <button class="add-to-list-btn ${added ? 'added' : ''}"
             id="ing-btn-${r.id}-${i}"
@@ -1458,7 +1458,7 @@ function shoppingRowHtml(item) {
 
   return `<div class="shopping-item ${item.checked ? 'checked' : ''}" id="si-${item.id}">
     <div class="check-box ${item.checked ? 'checked' : ''}" onclick="toggleCheck('${item.id}')">${item.checked ? '✓' : ''}</div>
-    <span class="shopping-name">${escHtml(item.name)}</span>
+    <span class="shopping-name">${escHtml(translateIngredient(item.name))}</span>
     <span class="shopping-amount">${escHtml(item.amount)} ${escHtml(item.unit)}</span>
     ${badge}
     <button class="remove-item-btn" onclick="removeShoppingItem('${item.id}')">×</button>
@@ -1554,6 +1554,234 @@ async function fetchRecipeFromUrl() {
     btn.textContent = t('fetch_btn');
     btn.disabled    = false;
   }
+}
+
+// ═══════════════════════════════════════════════════
+// Ingredient translation (English → Swedish)
+// Data stays stored in English; translation applied at display time only.
+// ═══════════════════════════════════════════════════
+const INGREDIENT_SV = {
+  // Meat
+  'chicken':'kyckling','chicken breast':'kycklingbröst','chicken breasts':'kycklingbröst',
+  'chicken thigh':'kycklinglår','chicken thighs':'kycklinglår','chicken legs':'kycklingben',
+  'chicken wings':'kycklingvingar','chicken drumsticks':'kycklingklubba',
+  'ground chicken':'kycklingfärs','minced chicken':'kycklingfärs',
+  'beef':'nötkött','ground beef':'nötfärs','beef mince':'nötfärs','minced beef':'nötfärs',
+  'steak':'biff','sirloin':'ryggbiff','ribeye':'entrecôte','brisket':'bringa',
+  'pork':'fläsk','pork belly':'sidfläsk','pork chops':'fläskkotletter',
+  'pork mince':'fläskfärs','ground pork':'fläskfärs','pork loin':'fläskfilé',
+  'bacon':'bacon','ham':'skinka','sausage':'korv','sausages':'korv',
+  'chorizo':'chorizo','salami':'salami','pancetta':'pancetta',
+  'prosciutto':'prosciutto','pepperoni':'pepperoni','lardons':'bacon',
+  'lamb':'lamm','lamb chops':'lammkotletter','minced lamb':'lammfärs','lamb mince':'lammfärs',
+  'turkey':'kalkon','duck':'anka','duck breast':'ankbröst','veal':'kalv',
+  'rabbit':'kanin','venison':'hjortkött',
+  // Fish & seafood
+  'salmon':'lax','salmon fillet':'laxfilé','smoked salmon':'rökt lax',
+  'tuna':'tonfisk','cod':'torsk','cod fillet':'torskfilé','haddock':'kolja',
+  'sea bass':'havsabborre','trout':'öring','mackerel':'makrill',
+  'sardines':'sardiner','anchovies':'ansjovis','herring':'sill',
+  'shrimp':'räkor','prawns':'räkor','prawn':'räka','king prawns':'kungräkor',
+  'lobster':'hummer','crab':'krabba','squid':'bläckfisk','octopus':'bläckfisk',
+  'mussels':'musslor','mussel':'mussla','clams':'musslor',
+  'oysters':'ostron','scallops':'kammusslor','seafood':'skaldjur',
+  // Vegetables
+  'onion':'lök','onions':'lök','red onion':'rödlök','white onion':'vit lök',
+  'spring onion':'salladslök','spring onions':'salladslök',
+  'green onion':'salladslök','green onions':'salladslök',
+  'scallion':'salladslök','scallions':'salladslök',
+  'shallot':'schalottenlök','shallots':'schalottenlök',
+  'garlic':'vitlök','garlic clove':'vitlöksklyfta','garlic cloves':'vitlöksklyftor',
+  'tomato':'tomat','tomatoes':'tomater','cherry tomatoes':'körsbärstomater',
+  'sun-dried tomatoes':'soltorkade tomater','plum tomatoes':'plommontomater',
+  'potato':'potatis','potatoes':'potatis','baby potatoes':'småpotatis',
+  'sweet potato':'sötpotatis','sweet potatoes':'sötpotatis',
+  'carrot':'morot','carrots':'morötter','baby carrots':'babymorötter',
+  'red pepper':'röd paprika','green pepper':'grön paprika','yellow pepper':'gul paprika',
+  'bell pepper':'paprika','bell peppers':'paprika','pepper':'paprika',
+  'chilli':'chili','chili':'chili','red chilli':'röd chili','green chilli':'grön chili',
+  'jalapeño':'jalapeño','jalapeno':'jalapeño',
+  'spinach':'spenat','baby spinach':'babyspenat',
+  'broccoli':'broccoli','tenderstem broccoli':'broccolini',
+  'cauliflower':'blomkål','romanesco':'romanesco',
+  'mushroom':'champinjon','mushrooms':'champinjoner',
+  'chestnut mushrooms':'kastanjechampinjoner','portobello mushroom':'portobellosvamp',
+  'zucchini':'zucchini','courgette':'zucchini',
+  'cucumber':'gurka','celery':'selleri','celery stalks':'selleristjälkar',
+  'leek':'purjolök','leeks':'purjolök',
+  'kale':'grönkål','savoy cabbage':'savojkål','red cabbage':'rödkål','cabbage':'kål',
+  'aubergine':'aubergine','eggplant':'aubergine',
+  'asparagus':'sparris','corn':'majs','sweetcorn':'majs',
+  'pumpkin':'pumpa','butternut squash':'butternutsquash','squash':'squash',
+  'beetroot':'rödbeta','beet':'rödbeta',
+  'radish':'rädisa','radishes':'rädisa',
+  'fennel':'fänkål','artichoke':'kronärtskocka',
+  'bean sprouts':'böngroddar','bean sprout':'böngrodd',
+  'bok choy':'pak choi','pak choi':'pak choi',
+  'arugula':'ruccola','rocket':'ruccola',
+  'lettuce':'sallad','iceberg lettuce':'isbergssallad','romaine lettuce':'romansallad',
+  'mixed leaves':'blandad sallad','mixed salad':'blandad sallad',
+  'turnip':'kålrot','parsnip':'palsternacka','swede':'kålrot','yam':'jams',
+  'mangetout':'sockerärtor','sugar snap peas':'sockerärtor',
+  'green beans':'haricots verts','runner beans':'skärbönor',
+  // Herbs
+  'parsley':'persilja','fresh parsley':'färsk persilja','flat leaf parsley':'platt persilja',
+  'coriander':'koriander','fresh coriander':'färsk koriander','cilantro':'koriander',
+  'basil':'basilika','fresh basil':'färsk basilika',
+  'thyme':'timjan','fresh thyme':'färsk timjan','dried thyme':'torkad timjan',
+  'rosemary':'rosmarin','fresh rosemary':'färsk rosmarin','dried rosemary':'torkad rosmarin',
+  'sage':'salvia','dill':'dill','fresh dill':'färsk dill',
+  'chives':'gräslök','mint':'mynta','fresh mint':'färsk mynta',
+  'oregano':'oregano','dried oregano':'torkad oregano',
+  'bay leaf':'lagerblad','bay leaves':'lagerblad',
+  'lemongrass':'citrongräs','tarragon':'dragon','marjoram':'mejram',
+  // Fruit
+  'lemon':'citron','lemons':'citroner','lemon zest':'citronskal',
+  'lime':'lime','limes':'limefrukter',
+  'orange':'apelsin','oranges':'apelsiner',
+  'apple':'äpple','apples':'äpplen',
+  'banana':'banan','bananas':'bananer',
+  'avocado':'avokado','mango':'mango','pineapple':'ananas',
+  'strawberry':'jordgubbe','strawberries':'jordgubbar',
+  'raspberry':'hallon','raspberries':'hallon',
+  'blueberry':'blåbär','blueberries':'blåbär',
+  'cherry':'körsbär','cherries':'körsbär',
+  'grape':'druva','grapes':'druvor',
+  'peach':'persika','peaches':'persikor',
+  'plum':'plommon','plums':'plommon',
+  'pear':'päron','pears':'päron',
+  'melon':'melon','watermelon':'vattenmelon',
+  'coconut':'kokosnöt','kiwi':'kiwi','pomegranate':'granatäpple',
+  'fig':'fikon','figs':'fikon',
+  'apricot':'aprikos','apricots':'aprikoser',
+  'date':'dadel','dates':'dadlar',
+  'raisins':'russin','sultanas':'russin','currants':'vinbär',
+  // Dairy & eggs
+  'milk':'mjölk','whole milk':'helmjölk','skimmed milk':'skummjölk','oat milk':'havremjölk',
+  'cream':'grädde','heavy cream':'vispgrädde','double cream':'vispgrädde',
+  'single cream':'matlagningsgrädde','whipping cream':'vispgrädde',
+  'sour cream':'gräddfil','crème fraîche':'crème fraiche','creme fraiche':'crème fraiche',
+  'butter':'smör','unsalted butter':'osaltat smör','salted butter':'saltat smör',
+  'cheese':'ost','cheddar':'cheddarost','cheddar cheese':'cheddarost',
+  'parmesan':'parmesan','parmesan cheese':'parmesanost',
+  'mozzarella':'mozzarella','feta':'fetaost','feta cheese':'fetaost',
+  'brie':'brie','gouda':'gouda','emmental':'emmentaler',
+  'halloumi':'halloumi','ricotta':'ricotta','mascarpone':'mascarpone',
+  'cream cheese':'färskost','cottage cheese':'keso','quark':'kvarg',
+  'yogurt':'yoghurt','yoghurt':'yoghurt',
+  'greek yogurt':'grekisk yoghurt','greek yoghurt':'grekisk yoghurt',
+  'egg':'ägg','eggs':'ägg','egg yolk':'äggula','egg yolks':'äggulor',
+  'egg white':'äggvita','egg whites':'äggvitor','ghee':'ghee',
+  // Grains, bread & pasta
+  'rice':'ris','basmati rice':'basmatirs','jasmine rice':'jasminris',
+  'brown rice':'brunt ris','arborio rice':'arborio ris',
+  'pasta':'pasta','spaghetti':'spaghetti','penne':'penne','fusilli':'fusilli',
+  'tagliatelle':'tagliatelle','linguine':'linguine','fettuccine':'fettuccine',
+  'lasagne sheets':'lasagneplattor','orzo':'orzo',
+  'noodles':'nudlar','egg noodles':'äggnudlar','rice noodles':'risnudlar',
+  'udon noodles':'udonnudlar','soba noodles':'sobanudlar',
+  'bread':'bröd','white bread':'vitt bröd','sourdough':'surdegsbröd',
+  'pitta bread':'pitabröd','tortilla':'tortilla','tortillas':'tortillabröd',
+  'oats':'havregryn','rolled oats':'havregryn',
+  'breadcrumbs':'ströbröd','panko':'panko',
+  'couscous':'couscous','quinoa':'quinoa','polenta':'polenta',
+  'bulgur wheat':'bulgur','bulgur':'bulgur',
+  // Legumes
+  'lentils':'linser','red lentils':'röda linser','green lentils':'gröna linser',
+  'chickpeas':'kikärtor','kidney beans':'kidneybönor',
+  'black beans':'svarta bönor','white beans':'vita bönor',
+  'cannellini beans':'cannellinibönor','butter beans':'smörbönor',
+  'peas':'ärtor','frozen peas':'frysta ärtor','edamame':'edamame',
+  // Oils & fats
+  'olive oil':'olivolja','extra virgin olive oil':'extra jungfruolja',
+  'vegetable oil':'matolja','sunflower oil':'solrosolja',
+  'sesame oil':'sesamolja','coconut oil':'kokosolja',
+  'rapeseed oil':'rapsolja','canola oil':'rapsolja','oil':'olja',
+  // Vinegars & sauces
+  'vinegar':'vinäger','balsamic vinegar':'balsamvinäger',
+  'red wine vinegar':'rödvinsvinäger','white wine vinegar':'vitvinsvinäger',
+  'apple cider vinegar':'äppelcidervinäger','rice vinegar':'risvinäger',
+  'soy sauce':'sojasås','dark soy sauce':'mörk sojasås','light soy sauce':'ljus sojasås',
+  'fish sauce':'fisksås','oyster sauce':'ostrongröt',
+  'hoisin sauce':'hoisinsås','worcestershire sauce':'worcestershiresås',
+  'tabasco':'tabasco','sriracha':'sriracha','hot sauce':'chilisås',
+  'ketchup':'ketchup','mustard':'senap','dijon mustard':'dijonsenap',
+  'wholegrain mustard':'grovkornssenap','mayonnaise':'majonnäs','mayo':'majonnäs',
+  'tomato paste':'tomatpuré','tomato puree':'tomatpuré',
+  'tomato sauce':'tomatsås','passata':'krossade tomater',
+  'chopped tomatoes':'krossade tomater','canned tomatoes':'konserverade tomater',
+  'tinned tomatoes':'konserverade tomater',
+  'coconut milk':'kokosmjölk','coconut cream':'kokosgrädde',
+  'stock':'buljong','chicken stock':'kycklingbuljong','beef stock':'nötbuljong',
+  'vegetable stock':'grönsaksbuljong','fish stock':'fiskbuljong',
+  'chicken broth':'kycklingbuljong','beef broth':'nötbuljong',
+  'vegetable broth':'grönsaksbuljong','stock cube':'buljongtärning','stock cubes':'buljongtärningar',
+  // Sweeteners & baking
+  'honey':'honung','maple syrup':'lönnsirap',
+  'sugar':'socker','brown sugar':'farinsocker','caster sugar':'strösocker',
+  'icing sugar':'florsocker','golden syrup':'ljus sirap',
+  'jam':'sylt','marmalade':'marmelad','peanut butter':'jordnötssmör',
+  'tahini':'tahini','miso':'miso','miso paste':'misopasta',
+  'harissa':'harissa','hummus':'hummus',
+  'olives':'oliver','black olives':'svarta oliver','green olives':'gröna oliver',
+  'capers':'kapris','gherkins':'cornichons','pickles':'pickles',
+  'flour':'mjöl','plain flour':'vetemjöl','all-purpose flour':'vetemjöl',
+  'self-raising flour':'vetemjöl special','bread flour':'bakmjöl',
+  'rice flour':'rismjöl','cornflour':'maizena','cornstarch':'maizena',
+  'baking powder':'bakpulver','baking soda':'bikarbonat',
+  'bicarbonate of soda':'bikarbonat','yeast':'jäst','dried yeast':'torrjäst',
+  'cocoa powder':'kakao','chocolate':'choklad',
+  'dark chocolate':'mörk choklad','milk chocolate':'mjölkchoklad',
+  'white chocolate':'vit choklad','vanilla':'vanilj',
+  'vanilla extract':'vaniljextrakt','vanilla pod':'vaniljstång',
+  // Spices
+  'salt':'salt','sea salt':'havssalt','flaky salt':'flingsalt',
+  'black pepper':'svartpeppar','white pepper':'vitpeppar',
+  'cayenne pepper':'cayennepeppar','chilli powder':'chilipulver','chili powder':'chilipulver',
+  'paprika':'paprikapulver','smoked paprika':'rökt paprikapulver',
+  'cumin':'spiskummin','ground cumin':'malen spiskummin',
+  'turmeric':'gurkmeja','ground turmeric':'malen gurkmeja',
+  'ground coriander':'malen koriander',
+  'cinnamon':'kanel','ground cinnamon':'malen kanel',
+  'ginger':'ingefära','ground ginger':'malen ingefära','fresh ginger':'färsk ingefära',
+  'nutmeg':'muskot','allspice':'kryddpeppar','cardamom':'kardemumma',
+  'cloves':'kryddnejlika','star anise':'stjärnanis',
+  'fennel seeds':'fänkålsfrön','caraway seeds':'kumminfrön',
+  'mustard seeds':'senapsfrön','sesame seeds':'sesamfrön',
+  'curry powder':'curry','garam masala':'garam masala',
+  'mixed spice':'pepparkakskrydda','five spice':'fem kryddor',
+  'ras el hanout':'ras el hanout',"za'atar":'za\'atar','sumac':'sumak','saffron':'saffran',
+  // Nuts & seeds
+  'almonds':'mandlar','flaked almonds':'mandelspån','ground almonds':'malen mandel',
+  'walnuts':'valnötter','cashews':'cashewnötter','cashew nuts':'cashewnötter',
+  'peanuts':'jordnötter','pine nuts':'pinjenötter',
+  'hazelnuts':'hasselnötter','pistachios':'pistaschnötter',
+  'pecans':'pekannötter','macadamia nuts':'macadamianötter',
+  'sunflower seeds':'solrosfrön','pumpkin seeds':'pumpafrön','flaxseeds':'linfrön',
+  // Other
+  'tofu':'tofu','firm tofu':'fast tofu','silken tofu':'silkestofu',
+  'water':'vatten','sparkling water':'kolsyrat vatten',
+  'red wine':'rödvin','white wine':'vitt vin','rose wine':'rosévin','beer':'öl',
+  'lemon juice':'citronsaft','lime juice':'limejuice','orange juice':'apelsinjuice',
+  'gelatin':'gelatin','agar':'agar',
+};
+
+// Translate a single ingredient name to Swedish (display only — stored value stays English)
+function translateIngredient(name) {
+  if (lang !== 'sv') return name;
+  const lower = (name || '').toLowerCase().trim();
+  // 1. Exact match
+  if (INGREDIENT_SV[lower]) return INGREDIENT_SV[lower];
+  // 2. Longest dictionary key that is a substring of the ingredient name
+  let best = null, bestLen = 0;
+  for (const [key, val] of Object.entries(INGREDIENT_SV)) {
+    if (lower.includes(key) && key.length > bestLen) {
+      best = val; bestLen = key.length;
+    }
+  }
+  if (best) return best;
+  // 3. No match — return original
+  return name;
 }
 
 // ═══════════════════════════════════════════════════
