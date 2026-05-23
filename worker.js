@@ -3,7 +3,7 @@
 // Paste this code, deploy, copy the URL, paste it in the app's Settings tab.
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -17,16 +17,56 @@ export default {
     const url        = new URL(request.url);
     const q          = url.searchParams.get('q');
     const recipeUrl  = url.searchParams.get('url');
+    const spc        = url.searchParams.get('spc');
 
     if (recipeUrl) return scrapeRecipe(recipeUrl, corsHeaders);
+    if (spc)       return spoonacularSearch(spc, url.searchParams, env, corsHeaders);
     if (q)         return checkWillys(q, corsHeaders);
 
     return new Response(
-      JSON.stringify({ error: 'Missing parameter: use ?q= for Willys or ?url= for recipe scraping' }),
+      JSON.stringify({ error: 'Missing parameter: use ?q= for Willys, ?url= for recipe scraping, or ?spc= for Spoonacular' }),
       { headers: corsHeaders }
     );
   },
 };
+
+// ── Spoonacular proxy ─────────────────────────────────────────────────────────
+async function spoonacularSearch(query, params, env, corsHeaders) {
+  const key = env.SPOONACULAR_KEY;
+  if (!key) {
+    return new Response(
+      JSON.stringify({ error: 'SPOONACULAR_KEY environment variable not set in Worker' }),
+      { headers: corsHeaders }
+    );
+  }
+  try {
+    const spcParams = new URLSearchParams({
+      query,
+      number: '12',
+      addRecipeInformation: 'true',
+      fillIngredients: 'true',
+      apiKey: key,
+    });
+    const diet      = params.get('diet');
+    const equipment = params.get('equipment');
+    if (diet)      spcParams.set('diet', diet);
+    if (equipment) spcParams.set('equipment', equipment);
+
+    const res = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${spcParams}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    if (!res.ok) {
+      return new Response(
+        JSON.stringify({ error: `Spoonacular returned ${res.status}` }),
+        { headers: corsHeaders }
+      );
+    }
+    const data = await res.text();
+    return new Response(data, { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { headers: corsHeaders });
+  }
+}
 
 // ── Recipe scraper ────────────────────────────────────────────────────────────
 async function scrapeRecipe(recipeUrl, corsHeaders) {

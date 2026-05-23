@@ -290,13 +290,6 @@
   <div class="view-header">⚙️ Settings</div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Spoonacular API Key</div>
-    <div class="settings-card-desc">Get a free key at spoonacular.com/food-api (150 searches/day). Adds thousands more recipes — including proper air fryer results — alongside TheMealDB.</div>
-    <input class="mono-input" id="spoonacular-key-input" type="text" placeholder="your-spoonacular-api-key">
-    <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveSpoonacularKey()">Save key</button>
-  </div>
-
-  <div class="settings-card">
     <div class="settings-card-title">Willys Worker URL</div>
     <div class="settings-card-desc">For green availability badges in the app you need a Cloudflare Worker. Without a Worker you can still tap an ingredient to open a Willys search in your browser.</div>
     <input class="mono-input" id="worker-url-input" type="url" placeholder="https://your-worker.workers.dev">
@@ -417,7 +410,6 @@ let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
 let filters       = { cookingType: null, protein: null, time: null, prepTime: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
-let spoonacularKey   = localStorage.getItem('spoonacularKey') || '';
 let mealDbResults    = [];   // live TheMealDB search results (not yet saved)
 let spoonacularResults = []; // live Spoonacular search results (not yet saved)
 let mealDbSearching  = false;
@@ -454,7 +446,6 @@ function showView(name) {
   if (name === 'favourites') renderFavourites();
   if (name === 'shopping')   renderShopping();
   if (name === 'settings') {
-    document.getElementById('spoonacular-key-input').value = spoonacularKey;
     document.getElementById('worker-url-input').value = workerUrl;
   }
 }
@@ -1430,32 +1421,18 @@ function saveWorkerUrl() {
   showToast('Worker URL saved!');
 }
 
-function saveSpoonacularKey() {
-  spoonacularKey = document.getElementById('spoonacular-key-input').value.trim();
-  localStorage.setItem('spoonacularKey', spoonacularKey);
-  showToast('Spoonacular key saved!');
-}
-
 // ═══════════════════════════════════════════════════
-// Spoonacular API
+// Spoonacular API (proxied via Cloudflare Worker)
 // ═══════════════════════════════════════════════════
 async function searchSpoonacular(query) {
-  if (!spoonacularKey) return [];
+  if (!workerUrl) return [];
   try {
-    const params = new URLSearchParams({
-      query,
-      number: 12,
-      addRecipeInformation: true,
-      fillIngredients: true,
-      apiKey: spoonacularKey,
-    });
-    // Map protein filter to diet param
+    const params = new URLSearchParams({ spc: query });
     if (filters.protein === 'vegetarisk') params.set('diet', 'vegetarian');
     if (filters.protein === 'vegan')      params.set('diet', 'vegan');
-    // Air fryer filter → equipment param
     if (filters.cookingType === 'airfryer') params.set('equipment', 'air fryer');
 
-    const res = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${params}`);
+    const res = await fetch(`${workerUrl}?${params}`);
     if (!res.ok) return [];
     const data = await res.json();
     return (data.results || []).map(spoonacularToRecipe);
