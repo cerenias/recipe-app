@@ -1295,11 +1295,8 @@ function openRecipe(id) {
     const numericId = id.replace(/^spc_/, '');
     fetch(`${workerUrl}?spc_id=${encodeURIComponent(numericId)}`)
       .then(res => res.json())
-      .then(blocks => {
-        const steps = [];
-        (Array.isArray(blocks) ? blocks : []).forEach(block => {
-          (block.steps || []).forEach(s => steps.push(s.step));
-        });
+      .then(data => {
+        const steps = data.steps || [];
         // Cache back so re-opens don't re-fetch
         const cached = spoonacularResults.find(x => x.id === id);
         if (cached) cached.instructions = steps;

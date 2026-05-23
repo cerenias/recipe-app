@@ -81,8 +81,9 @@ async function spoonacularInstructions(id, env, corsHeaders) {
     );
   }
   try {
+    // Fetch full recipe information — includes both structured and plain-text instructions
     const res = await fetch(
-      `https://api.spoonacular.com/recipes/${encodeURIComponent(id)}/analyzedInstructions?apiKey=${key}`,
+      `https://api.spoonacular.com/recipes/${encodeURIComponent(id)}/information?includeNutrition=false&apiKey=${key}`,
       { headers: { 'User-Agent': 'Mozilla/5.0' } }
     );
     if (!res.ok) {
@@ -91,8 +92,29 @@ async function spoonacularInstructions(id, env, corsHeaders) {
         { headers: corsHeaders }
       );
     }
-    const data = await res.text();
-    return new Response(data, { headers: corsHeaders });
+    const info = await res.json();
+
+    // Prefer structured analyzed instructions (array of steps)
+    const steps = [];
+    (info.analyzedInstructions || []).forEach(block => {
+      (block.steps || []).forEach(s => steps.push(s.step));
+    });
+
+    // Fall back to plain-text instructions field (strip HTML tags, split on newlines/sentences)
+    if (!steps.length && info.instructions) {
+      const plain = info.instructions
+        .replace(/<[^>]+>/g, ' ')   // strip HTML
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      // Split on sentence boundaries or numbered steps
+      plain.split(/(?:\r?\n)+|(?<=\.)\s+(?=[A-Z0-9])/)
+        .map(s => s.trim())
+        .filter(s => s.length > 4)
+        .forEach(s => steps.push(s));
+    }
+
+    return new Response(JSON.stringify({ steps }), { headers: corsHeaders });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { headers: corsHeaders });
   }
