@@ -929,8 +929,10 @@ function render() {
       return true;
     }
     const mdbFiltered = mealDbResults.filter(applyLiveFilters);
+    // Spoonacular: skip cookingType filter — the search query already targets the right method.
+    // Only apply protein and time filters on top of what Spoonacular returned.
     const spcFiltered = spoonacularResults.filter(r => {
-      if (!applyLiveFilters(r)) return false;
+      if (filters.protein && !(r.protein || []).includes(filters.protein)) return false;
       if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
       if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
       return true;
