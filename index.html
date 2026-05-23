@@ -141,6 +141,11 @@
     .willys-check-btn:active { opacity: 0.8; }
 
     .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    /* ── Instructions ── */
+    .instructions-list { margin: 0; padding-left: 22px; }
+    .instructions-list li { font-size: 15px; line-height: 1.6; padding: 6px 0; border-bottom: 1px solid var(--border); color: var(--text); }
+    .instructions-list li:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -238,6 +243,11 @@
       </div>
       <div id="ingredients-editor"></div>
       <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addIngredientRow()">+ Ingrediens</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tillagningsinstruktioner (ett steg per rad)</label>
+      <textarea class="form-input" id="f-instructions" rows="6" placeholder="Sätt ugnen på 200°C.&#10;Krydda kycklingen med salt och peppar.&#10;Grädda i 30 minuter." style="resize:vertical;line-height:1.5"></textarea>
     </div>
 
     <div class="divider"></div>
@@ -433,6 +443,7 @@ function showAddForm(recipe) {
     document.getElementById('f-time').value = recipe.time || '';
     document.getElementById('f-prep').value = recipe.prepTime || '';
     document.getElementById('f-image').value = recipe.image || '';
+    document.getElementById('f-instructions').value = (recipe.instructions || []).join('\n');
     document.getElementById('f-servings').value = recipe.servings || '';
     document.getElementById('submit-btn').textContent = 'Uppdatera recept';
     document.getElementById('delete-btn').style.display = 'block';
@@ -667,8 +678,13 @@ function openRecipe(id) {
       ${ctTags}${pTags}
     </div>
     ${ingsHtml}
+    ${r.instructions && r.instructions.length ? `
+    <div class="section-title">Tillagning</div>
+    <ol class="instructions-list">
+      ${r.instructions.map(step => `<li>${escHtml(step)}</li>`).join('')}
+    </ol>` : ''}
     <div style="margin-top:18px">
-      <a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn btn-primary">Öppna recept ↗</a>
+      ${!r._library ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn btn-primary">Öppna originalrecept ↗</a>` : ''}
       ${!r._library ? `<button class="btn btn-secondary" onclick="closePanel();showAddForm(allRecipes().find(x=>x.id==='${r.id}'))">✏️ Redigera</button>` : ''}
     </div>`;
 
@@ -686,7 +702,7 @@ function maybeClosePanel(e) {
 // Shopping list
 // ═══════════════════════════════════════════════════
 function toggleShoppingItem(recipeId, ingIndex) {
-  const r = recipes.find(x => x.id === recipeId);
+  const r = allRecipes().find(x => x.id === recipeId);
   if (!r) return;
   const ing = r.ingredients[ingIndex];
   if (!ing) return;
@@ -710,7 +726,7 @@ function toggleShoppingItem(recipeId, ingIndex) {
 }
 
 function addAllIngredients(recipeId) {
-  const r = recipes.find(x => x.id === recipeId);
+  const r = allRecipes().find(x => x.id === recipeId);
   if (!r || !r.ingredients) return;
   let added = 0;
   r.ingredients.forEach((ing, i) => {
@@ -876,6 +892,7 @@ function saveRecipe(e) {
     time:       parseInt(document.getElementById('f-time').value) || null,
     prepTime:   parseInt(document.getElementById('f-prep').value) || null,
     image:      document.getElementById('f-image').value.trim() || null,
+    instructions: document.getElementById('f-instructions').value.split('\n').map(s => s.trim()).filter(Boolean),
     servings:   parseInt(document.getElementById('f-servings').value) || null,
     ingredients,
   };
