@@ -18,13 +18,15 @@ export default {
     const q          = url.searchParams.get('q');
     const recipeUrl  = url.searchParams.get('url');
     const spc        = url.searchParams.get('spc');
+    const spcId      = url.searchParams.get('spc_id');
 
     if (recipeUrl) return scrapeRecipe(recipeUrl, corsHeaders);
     if (spc)       return spoonacularSearch(spc, url.searchParams, env, corsHeaders);
+    if (spcId)     return spoonacularInstructions(spcId, env, corsHeaders);
     if (q)         return checkWillys(q, corsHeaders);
 
     return new Response(
-      JSON.stringify({ error: 'Missing parameter: use ?q= for Willys, ?url= for recipe scraping, or ?spc= for Spoonacular' }),
+      JSON.stringify({ error: 'Missing parameter: use ?q= for Willys, ?url= for recipe scraping, ?spc= for Spoonacular search, or ?spc_id= for Spoonacular instructions' }),
       { headers: corsHeaders }
     );
   },
@@ -56,6 +58,33 @@ async function spoonacularSearch(query, params, env, corsHeaders) {
     const res = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${spcParams}`, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
+    if (!res.ok) {
+      return new Response(
+        JSON.stringify({ error: `Spoonacular returned ${res.status}` }),
+        { headers: corsHeaders }
+      );
+    }
+    const data = await res.text();
+    return new Response(data, { headers: corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { headers: corsHeaders });
+  }
+}
+
+// ── Spoonacular: fetch instructions for a single recipe ───────────────────────
+async function spoonacularInstructions(id, env, corsHeaders) {
+  const key = env.SPOONACULAR_KEY;
+  if (!key) {
+    return new Response(
+      JSON.stringify({ error: 'SPOONACULAR_KEY environment variable not set in Worker' }),
+      { headers: corsHeaders }
+    );
+  }
+  try {
+    const res = await fetch(
+      `https://api.spoonacular.com/recipes/${encodeURIComponent(id)}/analyzedInstructions?apiKey=${key}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
     if (!res.ok) {
       return new Response(
         JSON.stringify({ error: `Spoonacular returned ${res.status}` }),

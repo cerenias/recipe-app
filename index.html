@@ -1256,7 +1256,9 @@ function openRecipe(id) {
     <div class="section-title">${t('panel_instructions')}</div>
     <ol class="instructions-list">
       ${r.instructions.map(step => `<li>${escHtml(step)}</li>`).join('')}
-    </ol>` : '';
+    </ol>` : (r._spoonacular && workerUrl ? `
+    <div class="section-title">${t('panel_instructions')}</div>
+    <div id="spc-instructions-loading" style="color:var(--muted);font-size:14px;padding:10px 0">⏳ ${lang === 'sv' ? 'Hämtar instruktioner…' : 'Fetching instructions…'}</div>` : '');
 
   const actionsHtml = `<div style="margin-top:18px">
     ${!isSaved ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">${t('panel_save')}</button>` : ''}
@@ -1287,6 +1289,36 @@ function openRecipe(id) {
 
   document.getElementById('overlay').classList.add('open');
   document.body.classList.add('modal-open');
+
+  // Lazy-load instructions for Spoonacular recipes that came back without them
+  if (r._spoonacular && workerUrl && (!r.instructions || !r.instructions.length)) {
+    const numericId = id.replace(/^spc_/, '');
+    fetch(`${workerUrl}?spc_id=${encodeURIComponent(numericId)}`)
+      .then(res => res.json())
+      .then(blocks => {
+        const steps = [];
+        (Array.isArray(blocks) ? blocks : []).forEach(block => {
+          (block.steps || []).forEach(s => steps.push(s.step));
+        });
+        // Cache back so re-opens don't re-fetch
+        const cached = spoonacularResults.find(x => x.id === id);
+        if (cached) cached.instructions = steps;
+        const savedCopy = recipes.find(x => x.id === id);
+        if (savedCopy) savedCopy.instructions = steps;
+        // Update the panel if it's still open for the same recipe
+        const loadingEl = document.getElementById('spc-instructions-loading');
+        if (!loadingEl) return; // panel closed or different recipe opened
+        if (steps.length) {
+          loadingEl.outerHTML = `<ol class="instructions-list">${steps.map(s => `<li>${escHtml(s)}</li>`).join('')}</ol>`;
+        } else {
+          loadingEl.outerHTML = `<p style="color:var(--muted);font-size:14px">${lang === 'sv' ? 'Inga instruktioner tillgängliga.' : 'No instructions available.'}</p>`;
+        }
+      })
+      .catch(() => {
+        const loadingEl = document.getElementById('spc-instructions-loading');
+        if (loadingEl) loadingEl.outerHTML = '';
+      });
+  }
 }
 
 function closePanel() {
