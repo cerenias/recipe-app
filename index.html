@@ -902,12 +902,8 @@ function toggleFavourite(id, refreshPanel = false) {
   r.favourite = !r.favourite;
   saveData();
   showToast(r.favourite ? '❤️ Added to favourites' : 'Removed from favourites');
-  // Always update card hearts in-place across all visible grids
-  document.querySelectorAll(`.card-fav-badge[data-id="${id}"]`).forEach(btn => {
-    btn.textContent = r.favourite ? '❤️' : '🤍';
-    btn.setAttribute('aria-label', r.favourite ? 'Remove from favourites' : 'Add to favourites');
-  });
-  if (refreshPanel) openRecipe(id); // also refresh the open recipe panel
+  if (refreshPanel) openRecipe(id); // refresh the open recipe panel
+  render(); // re-render grid so card hearts update
 }
 
 function renderFavourites() {
@@ -963,7 +959,9 @@ function render() {
       if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
       return true;
     });
+    const liveIds = new Set([...mdbFiltered, ...spcFiltered].map(r => r.id));
     const savedMatches = recipes.filter(r => {
+      if (liveIds.has(r.id)) return false; // already shown in live results above
       if (q && !r.title.toLowerCase().includes(q)) return false;
       if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
       if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
