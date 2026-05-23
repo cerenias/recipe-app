@@ -675,18 +675,39 @@ function render() {
   // ── Active search ──
   if (search.length >= 2) {
     if (mealDbSearching) {
-      const savedMatches = recipes.filter(r => r.title.toLowerCase().includes(q));
+      const savedMatches = recipes.filter(r => {
+        if (!r.title.toLowerCase().includes(q)) return false;
+        if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
+        if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
+        return true;
+      });
       let html = `<div class="grid-section-label">Söker på TheMealDB… ⏳</div>`;
       html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
       grid.innerHTML = html;
       return;
     }
 
-    const savedMatches = recipes.filter(r => r.title.toLowerCase().includes(q));
+    // Apply filters where we have data
+    const mdbFiltered = mealDbResults.filter(r => {
+      // TheMealDB has protein (from category) but not cookingType/time — only filter what we know
+      if (filters.protein && !(r.protein || []).includes(filters.protein)) return false;
+      return true;
+    });
+    const savedMatches = recipes.filter(r => {
+      if (!r.title.toLowerCase().includes(q)) return false;
+      if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
+      if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
+      if (filters.time)    { const max = parseInt(filters.time);    if (r.time     && r.time     > max) return false; }
+      if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
+      return true;
+    });
+
     let html = '';
-    if (mealDbResults.length) {
-      html += `<div class="grid-section-label">TheMealDB — ${mealDbResults.length} recept</div>`;
-      html += mealDbResults.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
+    if (mdbFiltered.length) {
+      const note = filters.cookingType || filters.time || filters.prepTime
+        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(Tillagning/tid-filter gäller ej TheMealDB)</span>` : '';
+      html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} recept${note}</div>`;
+      html += mdbFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
     }
     if (savedMatches.length) {
       html += `<div class="grid-section-label">Dina sparade recept</div>`;
