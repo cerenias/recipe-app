@@ -290,6 +290,13 @@
   <div class="view-header">⚙️ Settings</div>
 
   <div class="settings-card">
+    <div class="settings-card-title">Spoonacular API Key</div>
+    <div class="settings-card-desc">Get a free key at spoonacular.com/food-api (150 searches/day). Adds thousands more recipes — including proper air fryer results — alongside TheMealDB.</div>
+    <input class="mono-input" id="spoonacular-key-input" type="text" placeholder="your-spoonacular-api-key">
+    <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveSpoonacularKey()">Save key</button>
+  </div>
+
+  <div class="settings-card">
     <div class="settings-card-title">Willys Worker URL</div>
     <div class="settings-card-desc">For green availability badges in the app you need a Cloudflare Worker. Without a Worker you can still tap an ingredient to open a Willys search in your browser.</div>
     <input class="mono-input" id="worker-url-input" type="url" placeholder="https://your-worker.workers.dev">
@@ -409,9 +416,11 @@ const KNOWN_SITES = {
 let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
 let filters       = { cookingType: null, protein: null, time: null, prepTime: null };
-let workerUrl     = localStorage.getItem('workerUrl') || '';
-let mealDbResults = [];   // live TheMealDB search results (not yet saved)
-let mealDbSearching = false;
+let workerUrl        = localStorage.getItem('workerUrl') || '';
+let spoonacularKey   = localStorage.getItem('spoonacularKey') || '';
+let mealDbResults    = [];   // live TheMealDB search results (not yet saved)
+let spoonacularResults = []; // live Spoonacular search results (not yet saved)
+let mealDbSearching  = false;
 let searchDebounce  = null;
 
 // ═══════════════════════════════════════════════════
@@ -445,6 +454,7 @@ function showView(name) {
   if (name === 'favourites') renderFavourites();
   if (name === 'shopping')   renderShopping();
   if (name === 'settings') {
+    document.getElementById('spoonacular-key-input').value = spoonacularKey;
     document.getElementById('worker-url-input').value = workerUrl;
   }
 }
@@ -726,11 +736,13 @@ function mealDbToRecipe(meal) {
 }
 
 function saveMealDbRecipe(id) {
-  const r = mealDbResults.find(x => x.id === id);
+  let r = mealDbResults.find(x => x.id === id);
+  if (!r) r = spoonacularResults.find(x => x.id === id);
   if (!r) return;
   if (recipes.some(x => x.id === id)) { showToast('Already saved!'); openRecipe(id); return; }
   const toSave = { ...r };
   delete toSave._mealdb;
+  delete toSave._spoonacular;
   recipes.unshift(toSave);
   saveData();
   showToast('Recipe saved! 🎉');
@@ -738,13 +750,15 @@ function saveMealDbRecipe(id) {
   render();
 }
 
-// Auto-save a MealDB recipe to user's collection (used when adding ingredients without explicit save)
+// Auto-save a live result to user's collection (used when adding ingredients without explicit save)
 function ensureSaved(id) {
   if (recipes.some(x => x.id === id)) return true;
-  const r = mealDbResults.find(x => x.id === id);
+  let r = mealDbResults.find(x => x.id === id);
+  if (!r) r = spoonacularResults.find(x => x.id === id);
   if (!r) return false;
   const toSave = { ...r };
   delete toSave._mealdb;
+  delete toSave._spoonacular;
   recipes.unshift(toSave);
   saveData();
   return true;
@@ -775,8 +789,9 @@ function triggerSearch() {
   clearTimeout(searchDebounce);
 
   if (!query) {
-    mealDbResults   = [];
-    mealDbSearching = false;
+    mealDbResults      = [];
+    spoonacularResults = [];
+    mealDbSearching    = false;
     render();
     return;
   }
@@ -785,7 +800,10 @@ function triggerSearch() {
   render();
 
   searchDebounce = setTimeout(async () => {
-    mealDbResults   = await searchMealDb(query);
+    [mealDbResults, spoonacularResults] = await Promise.all([
+      searchMealDb(query),
+      searchSpoonacular(query),
+    ]);
     mealDbSearching = false;
     render();
   }, 400);
@@ -854,7 +872,7 @@ function recipeCardHtml(r, onclick) {
       <div class="recipe-card-title">${escHtml(r.title)}</div>
       <div class="recipe-card-meta">
         ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-        ${r._mealdb ? `<span class="tag unsaved">＋ Save</span>` : ''}
+        ${(r._mealdb || r._spoonacular) ? `<span class="tag unsaved">＋ Save</span>` : ''}
         ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min</span>` : ''}
         ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
         ${ctTags}${pTags}
@@ -907,17 +925,23 @@ function render() {
         if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
         return true;
       });
-      let html = `<div class="grid-section-label">Searching TheMealDB… ⏳</div>`;
+      let html = `<div class="grid-section-label">Searching recipes… ⏳</div>`;
       html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
       grid.innerHTML = html;
       return;
     }
 
-    // Apply filters where we have data
-    const mdbFiltered = mealDbResults.filter(r => {
-      // TheMealDB: protein from category, cookingType inferred from instructions, no time data
+    // Filter helpers
+    function applyLiveFilters(r) {
       if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
       if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
+      return true;
+    }
+    const mdbFiltered = mealDbResults.filter(applyLiveFilters);
+    const spcFiltered = spoonacularResults.filter(r => {
+      if (!applyLiveFilters(r)) return false;
+      if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
+      if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
       return true;
     });
     const savedMatches = recipes.filter(r => {
@@ -930,9 +954,13 @@ function render() {
     });
 
     let html = '';
+    if (spcFiltered.length) {
+      html += `<div class="grid-section-label">Spoonacular — ${spcFiltered.length} recipes</div>`;
+      html += spcFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
+    }
     if (mdbFiltered.length) {
       const note = filters.time || filters.prepTime
-        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(time filters don't apply to TheMealDB)</span>` : '';
+        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(time filters don't apply)</span>` : '';
       html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} recipes${note}</div>`;
       html += mdbFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
     }
@@ -983,9 +1011,10 @@ function escHtml(str) {
 function openRecipe(id) {
   let r = recipes.find(x => x.id === id);
   if (!r) r = mealDbResults.find(x => x.id === id);
+  if (!r) r = spoonacularResults.find(x => x.id === id);
   if (!r) return;
 
-  const isSaved = !r._mealdb;
+  const isSaved = !r._mealdb && !r._spoonacular;
 
   const ctTags = (r.cookingType || []).map(v => {
     const o = COOKING_TYPES.find(x => x.val === v);
@@ -1042,7 +1071,7 @@ function openRecipe(id) {
     <div class="panel-title">${escHtml(r.title)}</div>
     <div class="panel-meta">
       ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-      ${!isSaved ? `<span class="tag unsaved">＋ Save</span>` : ''}
+      ${(r._mealdb || r._spoonacular) ? `<span class="tag unsaved">＋ Save</span>` : ''}
       ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min prep</span>` : ''}
       ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)} total</span>` : ''}
       ${r.servings ? `<span class="tag">👥 ${r.servings} servings</span>` : ''}
@@ -1399,6 +1428,79 @@ function saveWorkerUrl() {
   workerUrl = document.getElementById('worker-url-input').value.trim();
   localStorage.setItem('workerUrl', workerUrl);
   showToast('Worker URL saved!');
+}
+
+function saveSpoonacularKey() {
+  spoonacularKey = document.getElementById('spoonacular-key-input').value.trim();
+  localStorage.setItem('spoonacularKey', spoonacularKey);
+  showToast('Spoonacular key saved!');
+}
+
+// ═══════════════════════════════════════════════════
+// Spoonacular API
+// ═══════════════════════════════════════════════════
+async function searchSpoonacular(query) {
+  if (!spoonacularKey) return [];
+  try {
+    const params = new URLSearchParams({
+      query,
+      number: 12,
+      addRecipeInformation: true,
+      fillIngredients: true,
+      apiKey: spoonacularKey,
+    });
+    // Map protein filter to diet param
+    if (filters.protein === 'vegetarisk') params.set('diet', 'vegetarian');
+    if (filters.protein === 'vegan')      params.set('diet', 'vegan');
+    // Air fryer filter → equipment param
+    if (filters.cookingType === 'airfryer') params.set('equipment', 'air fryer');
+
+    const res = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${params}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).map(spoonacularToRecipe);
+  } catch { return []; }
+}
+
+function spoonacularToRecipe(item) {
+  const ingredients = (item.extendedIngredients || []).map(ing => {
+    const { amount, unit } = convertMeasure(`${ing.amount} ${ing.unit}`);
+    return { name: ing.nameClean || ing.name, amount, unit };
+  });
+
+  const instructions = [];
+  (item.analyzedInstructions || []).forEach(block => {
+    (block.steps || []).forEach(s => instructions.push(s.step));
+  });
+
+  // Infer protein: trust Spoonacular's vegetarian/vegan flags first, then scan title
+  const proteinMap = { chicken:'kyckling', beef:'nötkött', pork:'fläsk', lamb:'nötkött',
+                       salmon:'fisk', fish:'fisk', shrimp:'skaldjur', seafood:'skaldjur' };
+  const protein = [];
+  if (item.vegan)       protein.push('vegan');
+  else if (item.vegetarian) protein.push('vegetarisk');
+  if (!protein.length) {
+    const tl = (item.title || '').toLowerCase();
+    for (const [key, val] of Object.entries(proteinMap)) {
+      if (tl.includes(key)) { protein.push(val); break; }
+    }
+  }
+
+  return {
+    id:          'spc_' + item.id,
+    title:       item.title,
+    image:       item.image || null,
+    site:        'Spoonacular',
+    url:         item.sourceUrl || '',
+    cookingType: inferCookingType(item.title, instructions),
+    protein,
+    ingredients,
+    instructions,
+    time:        item.readyInMinutes > 0 ? item.readyInMinutes : null,
+    prepTime:    item.preparationMinutes > 0 ? item.preparationMinutes : null,
+    servings:    item.servings || null,
+    _spoonacular: true,
+  };
 }
 
 function exportRecipes() {
