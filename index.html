@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Recipe Finder</title>
+  <title>Receptfinnaren</title>
   <style>
     :root {
       --bg: #f5f3ef;
@@ -175,31 +175,31 @@
 
 <!-- ── BROWSE VIEW ── -->
 <div id="view-browse" class="view active">
-  <div class="view-header">🍽 Recipe Finder</div>
+  <div class="view-header" data-i18n="header_browse">🍽 Receptfinnaren</div>
   <div id="search-wrap">
-    <input id="search-input" type="search" placeholder="Search TheMealDB or your saved recipes..." oninput="onSearchInput()">
+    <input id="search-input" type="search" data-i18n-placeholder="search_placeholder" placeholder="Sök recept…" oninput="onSearchInput()">
   </div>
   <div id="filter-bar">
-    <button class="filter-chip" data-type="cookingType" onclick="openFilter('cookingType')">Method ▾</button>
-    <button class="filter-chip" data-type="protein" onclick="openFilter('protein')">Protein ▾</button>
-    <button class="filter-chip" data-type="time" onclick="openFilter('time')">Time ▾</button>
-    <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')">Prep ▾</button>
+    <button class="filter-chip" data-type="cookingType" onclick="openFilter('cookingType')" data-i18n-chip="filter_method">Metod ▾</button>
+    <button class="filter-chip" data-type="protein" onclick="openFilter('protein')" data-i18n-chip="filter_protein">Protein ▾</button>
+    <button class="filter-chip" data-type="time" onclick="openFilter('time')" data-i18n-chip="filter_time">Tid ▾</button>
+    <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')" data-i18n-chip="filter_prep">Förb. ▾</button>
   </div>
   <div id="filter-bar-diet">
-    <button class="filter-chip" data-type="diet" onclick="openFilter('diet')">Diet ▾</button>
+    <button class="filter-chip" data-type="diet" onclick="openFilter('diet')" data-i18n-chip="filter_diet">Kost ▾</button>
   </div>
   <div id="recipe-grid"></div>
 </div>
 
 <!-- ── FAVOURITES VIEW ── -->
 <div id="view-favourites" class="view">
-  <div class="view-header">❤️ Favourites</div>
+  <div class="view-header" data-i18n="header_favourites">❤️ Favoriter</div>
   <div id="favourites-grid"></div>
 </div>
 
 <!-- ── SHOPPING LIST VIEW ── -->
 <div id="view-shopping" class="view">
-  <div class="view-header">🛒 Shopping List</div>
+  <div class="view-header" data-i18n="header_shopping">🛒 Inköpslista</div>
   <div id="shopping-list-content"></div>
 </div>
 
@@ -211,7 +211,7 @@
     <div class="drag-handle" style="visibility:hidden"></div>
   </div>
   <div style="display:flex;align-items:center;margin-bottom:16px;gap:8px">
-    <div class="form-panel-title" id="form-header">Add recipe</div>
+    <div class="form-panel-title" id="form-header" data-i18n="form_add">Lägg till recept</div>
     <div style="flex:1"></div>
     <button type="button" onclick="closeEditForm()" aria-label="Close" class="panel-close">✕</button>
   </div>
@@ -219,135 +219,143 @@
     <input type="hidden" id="f-id">
 
     <div class="form-group">
-      <label class="form-label">Recipe name</label>
-      <input class="form-input" type="text" id="f-title" required placeholder="e.g. Creamy chicken stew">
+      <label class="form-label" data-i18n="form_name">Receptnamn</label>
+      <input class="form-input" type="text" id="f-title" required data-i18n-placeholder="form_name_ph" placeholder="t.ex. Krämig kycklinggryta">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Recipe URL — paste to auto-fetch</label>
+      <label class="form-label" data-i18n="form_url">Recept-URL — klistra in för att hämta</label>
       <div style="display:flex;gap:8px;align-items:stretch">
         <input class="form-input" type="url" id="f-url" placeholder="https://www.koket.se/recept/..." style="flex:1;min-width:0">
-        <button type="button" id="fetch-btn" onclick="fetchRecipeFromUrl()" style="padding:0 16px;border-radius:10px;border:1.5px solid var(--accent);background:none;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">Fetch ▶</button>
+        <button type="button" id="fetch-btn" onclick="fetchRecipeFromUrl()" style="padding:0 16px;border-radius:10px;border:1.5px solid var(--accent);background:none;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit" data-i18n="fetch_btn">Hämta ▶</button>
       </div>
       <div id="fetch-status"></div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Image URL (optional)</label>
+      <label class="form-label" data-i18n="form_image">Bild-URL (valfritt)</label>
       <input class="form-input" type="url" id="f-image" placeholder="https://...jpg">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Cooking method</label>
+      <label class="form-label" data-i18n="form_method">Tillagningsmetod</label>
       <div class="chip-group" id="f-cookingType">
-        <div class="chip" data-val="ugn">🫕 Oven</div>
-        <div class="chip" data-val="panna">🍳 Pan</div>
-        <div class="chip" data-val="airfryer">💨 Air fryer</div>
-        <div class="chip" data-val="gryta">🍲 Stew</div>
+        <div class="chip" data-val="ugn">🫕 Ugn</div>
+        <div class="chip" data-val="panna">🍳 Stekpanna</div>
+        <div class="chip" data-val="airfryer">💨 Airfryer</div>
+        <div class="chip" data-val="gryta">🍲 Gryta</div>
         <div class="chip" data-val="grill">🔥 Grill</div>
         <div class="chip" data-val="wok">🥢 Wok</div>
-        <div class="chip" data-val="kokt">💧 Boiled</div>
+        <div class="chip" data-val="kokt">💧 Kokt</div>
       </div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Protein</label>
+      <label class="form-label" data-i18n="form_protein">Protein</label>
       <div class="chip-group" id="f-protein">
-        <div class="chip" data-val="kyckling">🐔 Chicken</div>
-        <div class="chip" data-val="nötkött">🥩 Beef</div>
-        <div class="chip" data-val="fläsk">🐷 Pork</div>
-        <div class="chip" data-val="fisk">🐟 Fish</div>
-        <div class="chip" data-val="skaldjur">🦐 Seafood</div>
-        <div class="chip" data-val="vegetarisk">🥦 Vegetarian</div>
-        <div class="chip" data-val="vegan">🌱 Vegan</div>
+        <div class="chip" data-val="kyckling">🐔 Kyckling</div>
+        <div class="chip" data-val="nötkött">🥩 Nötkött</div>
+        <div class="chip" data-val="fläsk">🐷 Fläsk</div>
+        <div class="chip" data-val="fisk">🐟 Fisk</div>
+        <div class="chip" data-val="skaldjur">🦐 Skaldjur</div>
+        <div class="chip" data-val="vegetarisk">🥦 Vegetarisk</div>
+        <div class="chip" data-val="vegan">🌱 Vegansk</div>
       </div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Prep time (minutes)</label>
+      <label class="form-label" data-i18n="form_prep">Förberedelsetid (minuter)</label>
       <input class="form-input" type="number" id="f-prep" min="0" max="120" placeholder="10">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Total cooking time (minutes)</label>
+      <label class="form-label" data-i18n="form_time">Total tillagningstid (minuter)</label>
       <input class="form-input" type="number" id="f-time" min="1" max="480" placeholder="30">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Servings</label>
+      <label class="form-label" data-i18n="form_servings">Portioner</label>
       <input class="form-input" type="number" id="f-servings" min="1" max="20" placeholder="4">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Ingredients</label>
+      <label class="form-label" data-i18n="form_ingredients">Ingredienser</label>
       <div style="display:grid;grid-template-columns:1fr 72px 64px 32px;gap:8px;margin-bottom:6px;padding:0 2px">
-        <span style="font-size:11px;color:var(--muted)">Ingredient</span>
-        <span style="font-size:11px;color:var(--muted)">Amount</span>
-        <span style="font-size:11px;color:var(--muted)">Unit</span>
+        <span class="form-col-ingredient" style="font-size:11px;color:var(--muted)" data-i18n="form_col_ingredient">Ingrediens</span>
+        <span style="font-size:11px;color:var(--muted)" data-i18n="form_col_amount">Mängd</span>
+        <span style="font-size:11px;color:var(--muted)" data-i18n="form_col_unit">Enhet</span>
         <span></span>
       </div>
       <div id="ingredients-editor"></div>
-      <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addIngredientRow()">+ Ingredient</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="add-ing-btn" style="margin-top:8px" onclick="addIngredientRow()" data-i18n="form_add_ing">+ Ingrediens</button>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Cooking instructions (one step per line)</label>
-      <textarea class="form-input" id="f-instructions" rows="6" placeholder="Preheat oven to 200°C.&#10;Season the chicken with salt and pepper.&#10;Bake for 30 minutes." style="resize:vertical;line-height:1.5"></textarea>
+      <label class="form-label" data-i18n="form_instructions">Tillagningsinstruktioner (ett steg per rad)</label>
+      <textarea class="form-input" id="f-instructions" rows="6" data-i18n-placeholder="form_instructions_ph" placeholder="Förvärm ugnen till 200°C.&#10;Krydda kycklingen med salt och peppar.&#10;Grädda i 30 minuter." style="resize:vertical;line-height:1.5"></textarea>
     </div>
 
     <div class="divider"></div>
-    <button type="submit" class="btn btn-primary" id="submit-btn">Save recipe</button>
-    <button type="button" class="btn btn-secondary" onclick="closeEditForm()">Cancel</button>
-    <button type="button" class="btn btn-secondary btn-danger" id="delete-btn" style="display:none" onclick="deleteRecipe()">🗑 Remove from my recipes</button>
+    <button type="submit" class="btn btn-primary" id="submit-btn" data-i18n="form_save">Spara recept</button>
+    <button type="button" class="btn btn-secondary" id="cancel-btn" onclick="closeEditForm()" data-i18n="form_cancel">Avbryt</button>
+    <button type="button" class="btn btn-secondary btn-danger" id="delete-btn" style="display:none" onclick="deleteRecipe()" data-i18n="form_delete">🗑 Ta bort från mina recept</button>
   </form>
 </div>
 
 <!-- ── SETTINGS VIEW ── -->
 <div id="view-settings" class="view">
-  <div class="view-header">⚙️ Settings</div>
+  <div class="view-header" data-i18n="header_settings">⚙️ Inställningar</div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Willys Worker URL</div>
-    <div class="settings-card-desc">For green availability badges in the app you need a Cloudflare Worker. Without a Worker you can still tap an ingredient to open a Willys search in your browser.</div>
+    <div class="settings-card-title" data-i18n="settings_lang_title">Språk / Language</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary btn-sm lang-btn" data-lang="sv" onclick="setLang('sv')">🇸🇪 Svenska</button>
+      <button class="btn btn-secondary btn-sm lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 English</button>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <div class="settings-card-title" data-i18n="settings_worker_title">Willys Worker URL</div>
+    <div class="settings-card-desc" data-i18n="settings_worker_desc">För gröna tillgänglighetsmärken behöver du en Cloudflare Worker. Utan Worker kan du trycka på en ingrediens för att öppna en Willys-sökning i webbläsaren.</div>
     <input class="mono-input" id="worker-url-input" type="url" placeholder="https://your-worker.workers.dev">
-    <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveWorkerUrl()">Save URL</button>
+    <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveWorkerUrl()" data-i18n="settings_worker_save">Spara URL</button>
   </div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Export recipes</div>
-    <div class="settings-card-desc">Download all your recipes as a JSON file (backup to GitHub).</div>
-    <button class="btn btn-secondary" onclick="exportRecipes()">⬇ Export JSON</button>
+    <div class="settings-card-title" data-i18n="settings_export_title">Exportera recept</div>
+    <div class="settings-card-desc" data-i18n="settings_export_desc">Ladda ner alla dina recept som en JSON-fil (backup till GitHub).</div>
+    <button class="btn btn-secondary" onclick="exportRecipes()" data-i18n="settings_export_btn">⬇ Exportera JSON</button>
   </div>
 
   <div class="settings-card">
-    <div class="settings-card-title">Import recipes</div>
-    <div class="settings-card-desc">Load a previously exported JSON file.</div>
+    <div class="settings-card-title" data-i18n="settings_import_title">Importera recept</div>
+    <div class="settings-card-desc" data-i18n="settings_import_desc">Ladda in en tidigare exporterad JSON-fil.</div>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importRecipes(event)">
-    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Import JSON</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" data-i18n="settings_import_btn">⬆ Importera JSON</button>
   </div>
 
   <div class="settings-card" style="font-size:13px;color:var(--muted);line-height:1.5">
-    <div class="settings-card-title">About</div>
-    Recipe Finder · Recipes are saved locally in your browser (localStorage). Export JSON regularly as a backup.
+    <div class="settings-card-title" data-i18n="settings_about_title">Om appen</div>
+    <span data-i18n="settings_about_text">Receptfinnaren · Recept sparas lokalt i din webbläsare (localStorage). Exportera JSON regelbundet som backup.</span>
   </div>
 </div>
 
 <!-- ── BOTTOM NAV ── -->
 <nav id="nav">
   <button class="nav-btn active" id="nav-browse" onclick="showView('browse')">
-    <span class="nav-icon">🍽</span>Recipes
+    <span class="nav-icon">🍽</span><span data-i18n="nav_browse">Recept</span>
   </button>
   <button class="nav-btn" id="nav-favourites" onclick="showView('favourites')">
-    <span class="nav-icon">❤️</span>Favs
+    <span class="nav-icon">❤️</span><span data-i18n="nav_favs">Favoriter</span>
   </button>
   <button class="nav-btn" id="nav-shopping" onclick="showView('shopping')">
-    <span class="nav-icon">🛒</span>Shop
+    <span class="nav-icon">🛒</span><span data-i18n="nav_shopping">Handla</span>
   </button>
   <button class="nav-btn" id="nav-add" onclick="showAddForm(null)">
-    <span class="nav-icon">➕</span>Add
+    <span class="nav-icon">➕</span><span data-i18n="nav_add">Ny</span>
   </button>
   <button class="nav-btn" id="nav-settings" onclick="showView('settings')">
-    <span class="nav-icon">⚙️</span>Settings
+    <span class="nav-icon">⚙️</span><span data-i18n="nav_settings">Inst.</span>
   </button>
 </nav>
 
@@ -374,46 +382,196 @@
 // ═══════════════════════════════════════════════════
 // Constants
 // ═══════════════════════════════════════════════════
-const STORAGE_KEY = 'receptfinnaren_v1';
+const STORAGE_KEY  = 'receptfinnaren_v1';
 const SHOPPING_KEY = 'receptfinnaren_shopping_v1';
+const LANG_KEY     = 'receptfinnaren_lang';
 
-const COOKING_TYPES = [
-  { val: 'ugn',      label: '🫕 Oven' },
-  { val: 'panna',    label: '🍳 Pan' },
-  { val: 'airfryer', label: '💨 Air fryer' },
-  { val: 'gryta',    label: '🍲 Stew' },
-  { val: 'grill',    label: '🔥 Grill' },
-  { val: 'wok',      label: '🥢 Wok' },
-  { val: 'kokt',     label: '💧 Boiled' },
-];
+// ── Translations ────────────────────────────────────
+const T = {
+  en: {
+    nav_browse:'Recipes', nav_favs:'Favs', nav_shopping:'Shop', nav_add:'Add', nav_settings:'Settings',
+    header_browse:'🍽 Recipe Finder', header_favourites:'❤️ Favourites',
+    header_shopping:'🛒 Shopping List', header_settings:'⚙️ Settings',
+    search_placeholder:'Search TheMealDB or your saved recipes…',
+    filter_method:'Method', filter_protein:'Protein', filter_time:'Time', filter_prep:'Prep', filter_diet:'Diet',
+    filter_all:'All',
+    fm_cookingType:'Cooking method', fm_protein:'Protein', fm_time:'Time', fm_prepTime:'Prep time', fm_diet:'Dietary needs',
+    time_15:'⚡ Under 15 min', time_30:'🕒 Under 30 min', time_60:'⏱ Under 1 hour', time_999:'🕰 Any time',
+    prep_5:'⚡ Max 5 min prep', prep_10:'🕒 Max 10 min prep', prep_15:'⏱ Max 15 min prep', prep_999:'🕰 Any',
+    diet_glutenfree:'🌾 Gluten-free',
+    cat_produce:'🥦 Produce', cat_dairy:'🥛 Dairy & Eggs', cat_meat:'🥩 Meat & Fish',
+    cat_pantry:'🫙 Pantry', cat_frozen:'❄️ Frozen', cat_other:'📦 Other',
+    panel_ingredients:'Ingredients', panel_servings:'servings', panel_instructions:'Instructions',
+    panel_save:'💾 Save to my recipes', panel_open:'Open original recipe ↗', panel_edit:'✏️ Edit',
+    panel_add_all:'🛒 Add all to shopping list', panel_all_added:'✓ All on list',
+    panel_add_one:'+ List', panel_added:'✓ Added',
+    panel_prep:'min prep', panel_total:'total', panel_unsaved:'＋ Save',
+    grid_searching:'Searching recipes… ⏳', grid_saved:'Your saved recipes',
+    grid_prompt:'Search for a recipe above,\nor use the filters to browse\nby method, protein or diet.',
+    grid_empty:'No recipes found for', grid_empty_filters:'active filters',
+    grid_time_note:"(time filters don't apply)",
+    fav_empty:'No favourites yet.\nOpen a recipe and tap the\nheart to add it here.',
+    shop_empty:'Shopping list is empty.\nOpen a recipe and tap\n"Add all to shopping list".',
+    shop_willys:'🟢 Check Willys availability', shop_done:'✓ Done',
+    shop_clear_done:'Clear done', shop_clear_all:'Clear entire list',
+    shop_confirm_clear:'Clear the entire shopping list?',
+    willys_checking:'⏳ Checking…', willys_unknown:'Willys?',
+    form_add:'Add recipe', form_edit:'Edit recipe',
+    form_name:'Recipe name', form_name_ph:'e.g. Creamy chicken stew',
+    form_url:'Recipe URL — paste to auto-fetch',
+    form_image:'Image URL (optional)', form_image_ph:'https://...jpg',
+    form_method:'Cooking method', form_protein:'Protein',
+    form_prep:'Prep time (minutes)', form_time:'Total cooking time (minutes)',
+    form_servings:'Servings', form_ingredients:'Ingredients',
+    form_col_ingredient:'Ingredient', form_col_amount:'Amount', form_col_unit:'Unit',
+    form_add_ing:'+ Ingredient',
+    form_instructions:'Cooking instructions (one step per line)',
+    form_instructions_ph:'Preheat oven to 200°C.\nSeason the chicken with salt and pepper.\nBake for 30 minutes.',
+    form_save:'Save recipe', form_update:'Update recipe', form_cancel:'Cancel',
+    form_delete:'🗑 Remove from my recipes',
+    form_ing_ph:'Ingredient', form_amount_ph:'Amount', form_unit_ph:'Unit',
+    fetch_btn:'Fetch ▶', fetch_fetching:'⏳ Fetching…',
+    fetch_status:'Fetching recipe data from the page…',
+    fetch_ok:'✅ Fetched! Review, pick a cooking method, then Save.',
+    fetch_no_url:'Paste a URL first',
+    fetch_no_worker:'⚠️ Set Worker URL in Settings first.',
+    fetch_error:'⚠️ Something went wrong. Check the Worker URL in Settings.',
+    settings_lang_title:'Language / Språk',
+    settings_worker_title:'Willys Worker URL',
+    settings_worker_desc:'For green availability badges in the app you need a Cloudflare Worker. Without a Worker you can still tap an ingredient to open a Willys search in your browser.',
+    settings_worker_save:'Save URL',
+    settings_export_title:'Export recipes',
+    settings_export_desc:'Download all your recipes as a JSON file (backup to GitHub).',
+    settings_export_btn:'⬇ Export JSON',
+    settings_import_title:'Import recipes',
+    settings_import_desc:'Load a previously exported JSON file.',
+    settings_import_btn:'⬆ Import JSON',
+    settings_about_title:'About',
+    settings_about_text:'Recipe Finder · Recipes are saved locally in your browser (localStorage). Export JSON regularly as a backup.',
+    toast_fav_add:'❤️ Added to favourites', toast_fav_remove:'Removed from favourites',
+    toast_saved:'Recipe saved! 🎉', toast_updated:'Recipe updated!',
+    toast_already_saved:'Already saved!',
+    toast_shop_add:'Added to shopping list!', toast_shop_remove:'Removed from shopping list',
+    toast_all_on_list:'All already on list', toast_worker_saved:'Worker URL saved!',
+    warn_delete_pre:'⚠️ Permanently remove "', warn_delete_post:'" from your collection?\n\nThis cannot be undone. Any shopping list items from this recipe will also be removed.',
+  },
+  sv: {
+    nav_browse:'Recept', nav_favs:'Favoriter', nav_shopping:'Handla', nav_add:'Ny', nav_settings:'Inst.',
+    header_browse:'🍽 Receptfinnaren', header_favourites:'❤️ Favoriter',
+    header_shopping:'🛒 Inköpslista', header_settings:'⚙️ Inställningar',
+    search_placeholder:'Sök recept…',
+    filter_method:'Metod', filter_protein:'Protein', filter_time:'Tid', filter_prep:'Förb.', filter_diet:'Kost',
+    filter_all:'Alla',
+    fm_cookingType:'Tillagningsmetod', fm_protein:'Protein', fm_time:'Tid', fm_prepTime:'Förberedelsetid', fm_diet:'Kostbehov',
+    time_15:'⚡ Under 15 min', time_30:'🕒 Under 30 min', time_60:'⏱ Under 1 timme', time_999:'🕰 Valfri tid',
+    prep_5:'⚡ Max 5 min', prep_10:'🕒 Max 10 min', prep_15:'⏱ Max 15 min', prep_999:'🕰 Valfritt',
+    diet_glutenfree:'🌾 Glutenfritt',
+    cat_produce:'🥦 Grönsaker & frukt', cat_dairy:'🥛 Mejeri & ägg', cat_meat:'🥩 Kött & fisk',
+    cat_pantry:'🫙 Skafferi', cat_frozen:'❄️ Frysvaror', cat_other:'📦 Övrigt',
+    panel_ingredients:'Ingredienser', panel_servings:'portioner', panel_instructions:'Instruktioner',
+    panel_save:'💾 Spara recept', panel_open:'Öppna originalrecept ↗', panel_edit:'✏️ Redigera',
+    panel_add_all:'🛒 Lägg allt i inköpslistan', panel_all_added:'✓ Allt på listan',
+    panel_add_one:'+ Lista', panel_added:'✓ Tillagd',
+    panel_prep:'min förb.', panel_total:'totalt', panel_unsaved:'＋ Spara',
+    grid_searching:'Söker recept… ⏳', grid_saved:'Dina sparade recept',
+    grid_prompt:'Sök efter ett recept ovan,\neller använd filtren för att\nbläddra efter metod, protein eller kost.',
+    grid_empty:'Inga recept hittades för', grid_empty_filters:'aktiva filter',
+    grid_time_note:'(tidsfilter gäller ej)',
+    fav_empty:'Inga favoriter ännu.\nÖppna ett recept och tryck\npå hjärtat för att lägga till det.',
+    shop_empty:'Inköpslistan är tom.\nÖppna ett recept och tryck\n"Lägg allt i inköpslistan".',
+    shop_willys:'🟢 Kontrollera tillgänglighet på Willys', shop_done:'✓ Klart',
+    shop_clear_done:'Rensa klara', shop_clear_all:'Rensa hela listan',
+    shop_confirm_clear:'Rensa hela inköpslistan?',
+    willys_checking:'⏳ Kollar…', willys_unknown:'Willys?',
+    form_add:'Lägg till recept', form_edit:'Redigera recept',
+    form_name:'Receptnamn', form_name_ph:'t.ex. Krämig kycklinggryta',
+    form_url:'Recept-URL — klistra in för att hämta',
+    form_image:'Bild-URL (valfritt)', form_image_ph:'https://...jpg',
+    form_method:'Tillagningsmetod', form_protein:'Protein',
+    form_prep:'Förberedelsetid (minuter)', form_time:'Total tillagningstid (minuter)',
+    form_servings:'Portioner', form_ingredients:'Ingredienser',
+    form_col_ingredient:'Ingrediens', form_col_amount:'Mängd', form_col_unit:'Enhet',
+    form_add_ing:'+ Ingrediens',
+    form_instructions:'Tillagningsinstruktioner (ett steg per rad)',
+    form_instructions_ph:'Förvärm ugnen till 200°C.\nKrydda kycklingen med salt och peppar.\nGrädda i 30 minuter.',
+    form_save:'Spara recept', form_update:'Uppdatera recept', form_cancel:'Avbryt',
+    form_delete:'🗑 Ta bort från mina recept',
+    form_ing_ph:'Ingrediens', form_amount_ph:'Mängd', form_unit_ph:'Enhet',
+    fetch_btn:'Hämta ▶', fetch_fetching:'⏳ Hämtar…',
+    fetch_status:'Hämtar receptdata från sidan…',
+    fetch_ok:'✅ Hämtat! Granska, välj tillagningsmetod och spara.',
+    fetch_no_url:'Klistra in en URL först',
+    fetch_no_worker:'⚠️ Ange Worker-URL i Inställningar först.',
+    fetch_error:'⚠️ Något gick fel. Kontrollera Worker-URL i Inställningar.',
+    settings_lang_title:'Språk / Language',
+    settings_worker_title:'Willys Worker URL',
+    settings_worker_desc:'För gröna tillgänglighetsmärken behöver du en Cloudflare Worker. Utan Worker kan du trycka på en ingrediens för att öppna en Willys-sökning i webbläsaren.',
+    settings_worker_save:'Spara URL',
+    settings_export_title:'Exportera recept',
+    settings_export_desc:'Ladda ner alla dina recept som en JSON-fil (backup till GitHub).',
+    settings_export_btn:'⬇ Exportera JSON',
+    settings_import_title:'Importera recept',
+    settings_import_desc:'Ladda in en tidigare exporterad JSON-fil.',
+    settings_import_btn:'⬆ Importera JSON',
+    settings_about_title:'Om appen',
+    settings_about_text:'Receptfinnaren · Recept sparas lokalt i din webbläsare (localStorage). Exportera JSON regelbundet som backup.',
+    toast_fav_add:'❤️ Tillagd som favorit', toast_fav_remove:'Borttagen från favoriter',
+    toast_saved:'Recept sparat! 🎉', toast_updated:'Recept uppdaterat!',
+    toast_already_saved:'Redan sparad!',
+    toast_shop_add:'Tillagd i inköpslistan!', toast_shop_remove:'Borttagen från inköpslistan',
+    toast_all_on_list:'Allt finns redan på listan', toast_worker_saved:'Worker-URL sparad!',
+    warn_delete_pre:'⚠️ Ta bort "', warn_delete_post:'" permanent från din samling?\n\nDetta kan inte ångras. Inköpslistevaror från detta recept tas också bort.',
+  },
+};
 
-const PROTEINS = [
-  { val: 'kyckling',   label: '🐔 Chicken' },
-  { val: 'nötkött',   label: '🥩 Beef' },
-  { val: 'fläsk',     label: '🐷 Pork' },
-  { val: 'fisk',      label: '🐟 Fish' },
-  { val: 'skaldjur',  label: '🦐 Seafood' },
-  { val: 'vegetarisk',label: '🥦 Vegetarian' },
-  { val: 'vegan',     label: '🌱 Vegan' },
-];
+function t(key) { return T[lang]?.[key] ?? T.en[key] ?? key; }
 
-const TIME_OPTIONS = [
-  { val: '15',  label: '⚡ Under 15 min' },
-  { val: '30',  label: '🕒 Under 30 min' },
-  { val: '60',  label: '⏱ Under 1 hour' },
-  { val: '999', label: '🕰 Any time' },
-];
+// ── Per-type label maps (bilingual) ─────────────────
+const COOKING_TYPE_LABELS = {
+  ugn:      { en:'🫕 Oven',      sv:'🫕 Ugn' },
+  panna:    { en:'🍳 Pan',       sv:'🍳 Stekpanna' },
+  airfryer: { en:'💨 Air fryer', sv:'💨 Airfryer' },
+  gryta:    { en:'🍲 Stew',      sv:'🍲 Gryta' },
+  grill:    { en:'🔥 Grill',     sv:'🔥 Grill' },
+  wok:      { en:'🥢 Wok',       sv:'🥢 Wok' },
+  kokt:     { en:'💧 Boiled',    sv:'💧 Kokt' },
+};
+const PROTEIN_LABELS = {
+  kyckling:   { en:'🐔 Chicken',    sv:'🐔 Kyckling' },
+  'nötkött':  { en:'🥩 Beef',       sv:'🥩 Nötkött' },
+  'fläsk':    { en:'🐷 Pork',       sv:'🐷 Fläsk' },
+  fisk:       { en:'🐟 Fish',       sv:'🐟 Fisk' },
+  skaldjur:   { en:'🦐 Seafood',    sv:'🦐 Skaldjur' },
+  vegetarisk: { en:'🥦 Vegetarian', sv:'🥦 Vegetarisk' },
+  vegan:      { en:'🌱 Vegan',      sv:'🌱 Vegansk' },
+};
 
-const PREP_OPTIONS = [
-  { val: '5',  label: '⚡ Max 5 min prep' },
-  { val: '10', label: '🕒 Max 10 min prep' },
-  { val: '15', label: '⏱ Max 15 min prep' },
-  { val: '999', label: '🕰 Any' },
-];
-
-const DIET_OPTIONS = [
-  { val: 'glutenfree', label: '🌾 Gluten-free' },
-];
+function getCookingTypes() {
+  return Object.entries(COOKING_TYPE_LABELS).map(([val, lbl]) => ({ val, label: lbl[lang] }));
+}
+function getProteins() {
+  return Object.entries(PROTEIN_LABELS).map(([val, lbl]) => ({ val, label: lbl[lang] }));
+}
+function getTimeOptions() {
+  return [
+    { val:'15',  label: t('time_15') }, { val:'30',  label: t('time_30') },
+    { val:'60',  label: t('time_60') }, { val:'999', label: t('time_999') },
+  ];
+}
+function getPrepOptions() {
+  return [
+    { val:'5',   label: t('prep_5') }, { val:'10',  label: t('prep_10') },
+    { val:'15',  label: t('prep_15') }, { val:'999', label: t('prep_999') },
+  ];
+}
+function getDietOptions() { return [{ val:'glutenfree', label: t('diet_glutenfree') }]; }
+function getShoppingCategories() {
+  return [
+    { key:'produce', label: t('cat_produce') }, { key:'dairy', label: t('cat_dairy') },
+    { key:'meat',    label: t('cat_meat') },    { key:'pantry', label: t('cat_pantry') },
+    { key:'frozen',  label: t('cat_frozen') },  { key:'other', label: t('cat_other') },
+  ];
+}
 
 const KNOWN_SITES = {
   'koket.se':  'köket.se',
@@ -426,13 +584,15 @@ const KNOWN_SITES = {
 // ═══════════════════════════════════════════════════
 // State
 // ═══════════════════════════════════════════════════
+let lang          = localStorage.getItem(LANG_KEY) || 'sv';
 let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
 let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
-let mealDbResults    = [];   // live TheMealDB search results (not yet saved)
-let spoonacularResults = []; // live Spoonacular search results (not yet saved)
-let mealDbSearching  = false;
+let allMealDbRecipes  = [];   // all ~315 TheMealDB recipes, loaded once on first browse
+let mealDbLoading    = false; // true while fetching all 26 letters
+let mealDbAllLoaded  = false; // true once fully loaded (persists across tab switches)
+let spoonacularResults = []; // live Spoonacular results for current typed search
 let searchDebounce  = null;
 
 // ═══════════════════════════════════════════════════
@@ -464,11 +624,10 @@ function showView(name) {
 
   if (name === 'browse') {
     document.getElementById('search-input').value = '';
-    mealDbResults      = [];
     spoonacularResults = [];
     filters = { cookingType: null, protein: null, time: null, prepTime: null, diet: null };
     updateFilterChips();
-    render(); // show clean prompt — no filters, no results
+    loadAllMealDb(); // fetch all recipes on first visit; subsequent calls are no-ops
   }
   if (name === 'favourites') renderFavourites();
   if (name === 'shopping')   renderShopping();
@@ -503,7 +662,7 @@ function showAddForm(recipe) {
   document.querySelectorAll('#f-cookingType .chip, #f-protein .chip').forEach(c => c.classList.remove('selected'));
 
   if (recipe) {
-    document.getElementById('form-header').textContent = 'Edit recipe';
+    document.getElementById('form-header').textContent = t('form_edit');
     document.getElementById('f-id').value = recipe.id;
     document.getElementById('f-title').value = recipe.title;
     document.getElementById('f-url').value = recipe.url;
@@ -512,7 +671,7 @@ function showAddForm(recipe) {
     document.getElementById('f-image').value = recipe.image || '';
     document.getElementById('f-instructions').value = (recipe.instructions || []).join('\n');
     document.getElementById('f-servings').value = recipe.servings || '';
-    document.getElementById('submit-btn').textContent = 'Update recipe';
+    document.getElementById('submit-btn').textContent = t('form_update');
     document.getElementById('delete-btn').style.display = 'block';
     (recipe.cookingType || []).forEach(v => {
       const c = document.querySelector(`#f-cookingType .chip[data-val="${v}"]`);
@@ -524,9 +683,9 @@ function showAddForm(recipe) {
     });
     renderIngredientEditor(recipe.ingredients || []);
   } else {
-    document.getElementById('form-header').textContent = 'Add recipe';
+    document.getElementById('form-header').textContent = t('form_add');
     document.getElementById('f-id').value = '';
-    document.getElementById('submit-btn').textContent = 'Save recipe';
+    document.getElementById('submit-btn').textContent = t('form_save');
     document.getElementById('delete-btn').style.display = 'none';
     renderIngredientEditor([]);
   }
@@ -536,11 +695,18 @@ function showAddForm(recipe) {
 // Filter logic
 // ═══════════════════════════════════════════════════
 function openFilter(type) {
-  const cfg = { cookingType: { label: 'Cooking method', opts: COOKING_TYPES }, protein: { label: 'Protein', opts: PROTEINS }, time: { label: 'Time', opts: TIME_OPTIONS }, prepTime: { label: 'Prep time', opts: PREP_OPTIONS }, diet: { label: 'Dietary needs', opts: DIET_OPTIONS } }[type];
+  const cfgMap = {
+    cookingType: { labelKey: 'fm_cookingType', opts: getCookingTypes() },
+    protein:     { labelKey: 'fm_protein',     opts: getProteins() },
+    time:        { labelKey: 'fm_time',        opts: getTimeOptions() },
+    prepTime:    { labelKey: 'fm_prepTime',    opts: getPrepOptions() },
+    diet:        { labelKey: 'fm_diet',        opts: getDietOptions() },
+  };
+  const cfg = cfgMap[type];
   const current = filters[type];
 
-  let html = `<div class="filter-modal-title">${cfg.label}</div><div class="chip-group">`;
-  html += `<div class="chip ${!current ? 'selected' : ''}" onclick="setFilter('${type}', null)">All</div>`;
+  let html = `<div class="filter-modal-title">${t(cfg.labelKey)}</div><div class="chip-group">`;
+  html += `<div class="chip ${!current ? 'selected' : ''}" onclick="setFilter('${type}', null)">${t('filter_all')}</div>`;
   cfg.opts.forEach(o => {
     html += `<div class="chip ${current === o.val ? 'selected' : ''}" onclick="setFilter('${type}','${o.val}')">${o.label}</div>`;
   });
@@ -555,7 +721,10 @@ function setFilter(type, val) {
   filters[type] = val;
   maybeCloseFilter();
   updateFilterChips();
-  triggerSearch(); // may re-query TheMealDB if filters changed the effective query
+  render(); // instant — TheMealDB is pre-loaded
+  const q = getSpoonacularQuery();
+  if (q) searchSpoonacularDebounced(q);
+  else   { spoonacularResults = []; render(); }
 }
 
 function maybeCloseFilter(e) {
@@ -568,10 +737,13 @@ function maybeCloseFilter(e) {
 }
 
 function updateFilterChips() {
-  const defaults = { cookingType: 'Method', protein: 'Protein', time: 'Time', prepTime: 'Prep', diet: 'Diet' };
-  const allOpts = { cookingType: COOKING_TYPES, protein: PROTEINS, time: TIME_OPTIONS, prepTime: PREP_OPTIONS, diet: DIET_OPTIONS };
+  const defaultKeys = { cookingType: 'filter_method', protein: 'filter_protein', time: 'filter_time', prepTime: 'filter_prep', diet: 'filter_diet' };
+  const allOpts = {
+    cookingType: getCookingTypes(), protein: getProteins(),
+    time: getTimeOptions(), prepTime: getPrepOptions(), diet: getDietOptions(),
+  };
 
-  Object.keys(defaults).forEach(type => {
+  Object.keys(defaultKeys).forEach(type => {
     const chip = document.querySelector(`.filter-chip[data-type="${type}"]`);
     if (!chip) return;
     const val = filters[type];
@@ -581,7 +753,7 @@ function updateFilterChips() {
       chip.classList.add('active');
       chip.onclick = () => setFilter(type, null);
     } else {
-      chip.textContent = defaults[type] + ' ▾';
+      chip.textContent = t(defaultKeys[type]) + ' ▾';
       chip.classList.remove('active');
       chip.onclick = () => openFilter(type);
     }
@@ -589,14 +761,34 @@ function updateFilterChips() {
 }
 
 // ═══════════════════════════════════════════════════
-// TheMealDB
+// TheMealDB — load ALL recipes once by fetching each letter a–z
 // ═══════════════════════════════════════════════════
-async function searchMealDb(query) {
-  try {
-    const res  = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    return (data.meals || []).map(mealDbToRecipe);
-  } catch { return []; }
+async function loadAllMealDb() {
+  if (mealDbAllLoaded || mealDbLoading) return;
+  mealDbLoading = true;
+  render(); // show loading state immediately
+
+  const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  const batches = await Promise.all(
+    letters.map(l =>
+      fetch(`https://www.themealdb.com/api/json/v1/1/search.php?f=${l}`)
+        .then(r => r.json())
+        .then(d => (d.meals || []).map(mealDbToRecipe))
+        .catch(() => [])
+    )
+  );
+
+  // Flatten and deduplicate by id
+  const seen = new Set();
+  allMealDbRecipes = batches.flat().filter(r => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
+
+  mealDbLoading = false;
+  mealDbAllLoaded = true;
+  render();
 }
 
 function inferCookingType(title, instructions) {
@@ -754,16 +946,16 @@ function mealDbToRecipe(meal) {
 }
 
 function saveMealDbRecipe(id) {
-  let r = mealDbResults.find(x => x.id === id);
+  let r = allMealDbRecipes.find(x => x.id === id);
   if (!r) r = spoonacularResults.find(x => x.id === id);
   if (!r) return;
-  if (recipes.some(x => x.id === id)) { showToast('Already saved!'); openRecipe(id); return; }
+  if (recipes.some(x => x.id === id)) { showToast(t('toast_already_saved')); openRecipe(id); return; }
   const toSave = { ...r };
   delete toSave._mealdb;
   delete toSave._spoonacular;
   recipes.unshift(toSave);
   saveData();
-  showToast('Recipe saved! 🎉');
+  showToast(t('toast_saved'));
   openRecipe(id); // re-open so shopping buttons appear
   render();
 }
@@ -771,7 +963,7 @@ function saveMealDbRecipe(id) {
 // Auto-save a live result to user's collection (used when adding ingredients without explicit save)
 function ensureSaved(id) {
   if (recipes.some(x => x.id === id)) return true;
-  let r = mealDbResults.find(x => x.id === id);
+  let r = allMealDbRecipes.find(x => x.id === id);
   if (!r) r = spoonacularResults.find(x => x.id === id);
   if (!r) return false;
   const toSave = { ...r };
@@ -783,51 +975,44 @@ function ensureSaved(id) {
 }
 
 // ═══════════════════════════════════════════════════
-// Search input handler — query is either typed text OR derived from filters
+// Search input handler
+// TheMealDB is pre-loaded — text search just filters locally.
+// Spoonacular is queried when the user types OR when a protein/method filter is active.
 // ═══════════════════════════════════════════════════
-const PROTEIN_TO_MDB_QUERY = {
-  kyckling: 'chicken', nötkött: 'beef',     fläsk: 'pork',
-  fisk:     'fish',    skaldjur: 'shrimp',  vegetarisk: 'vegetable', vegan: 'vegan',
+
+// Maps Swedish internal filter values → English Spoonacular search terms
+const PROTEIN_TO_SPC = {
+  kyckling: 'chicken', 'nötkött': 'beef', 'fläsk': 'pork',
+  fisk: 'fish', skaldjur: 'shrimp', vegetarisk: 'vegetarian', vegan: 'vegan',
 };
-const COOKINGTYPE_TO_MDB_QUERY = {
-  ugn: 'baked', panna: 'fried',   airfryer: 'air fryer',
-  gryta: 'stew', grill: 'grilled', wok: 'stir', kokt: 'boiled',
+const COOKINGTYPE_TO_SPC = {
+  ugn: 'baked', panna: 'pan fried', airfryer: 'air fryer',
+  gryta: 'stew', grill: 'grilled', wok: 'stir fry', kokt: 'boiled',
 };
 
-function getEffectiveQuery() {
+// Returns the best Spoonacular search term given current typed text + active filters
+function getSpoonacularQuery() {
   const typed = (document.getElementById('search-input').value || '').trim();
   if (typed.length >= 2) return typed;
-  if (filters.protein     && PROTEIN_TO_MDB_QUERY[filters.protein])         return PROTEIN_TO_MDB_QUERY[filters.protein];
-  if (filters.cookingType && COOKINGTYPE_TO_MDB_QUERY[filters.cookingType]) return COOKINGTYPE_TO_MDB_QUERY[filters.cookingType];
+  if (filters.protein     && PROTEIN_TO_SPC[filters.protein])         return PROTEIN_TO_SPC[filters.protein];
+  if (filters.cookingType && COOKINGTYPE_TO_SPC[filters.cookingType]) return COOKINGTYPE_TO_SPC[filters.cookingType];
   return '';
 }
 
-function triggerSearch() {
-  const query = getEffectiveQuery();
-  clearTimeout(searchDebounce);
-
-  if (!query) {
-    mealDbResults      = [];
-    spoonacularResults = [];
-    mealDbSearching    = false;
-    render();
-    return;
-  }
-
-  mealDbSearching = true;
-  render();
-
-  searchDebounce = setTimeout(async () => {
-    [mealDbResults, spoonacularResults] = await Promise.all([
-      searchMealDb(query),
-      searchSpoonacular(query),
-    ]);
-    mealDbSearching = false;
-    render();
-  }, 400);
+function onSearchInput() {
+  render(); // instant local filter on allMealDbRecipes
+  const q = getSpoonacularQuery();
+  if (q) searchSpoonacularDebounced(q);
+  else   { spoonacularResults = []; render(); }
 }
 
-function onSearchInput() { triggerSearch(); }
+function searchSpoonacularDebounced(query) {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(async () => {
+    spoonacularResults = await searchSpoonacular(query);
+    render();
+  }, 500);
+}
 
 // ═══════════════════════════════════════════════════
 // Image helpers
@@ -874,24 +1059,26 @@ function panelVisualHtml(r) {
 // Browse / Render
 // ═══════════════════════════════════════════════════
 function recipeCardHtml(r, onclick) {
+  const cts = getCookingTypes();
+  const pts = getProteins();
   const ctTags = (r.cookingType || []).map(v => {
-    const o = COOKING_TYPES.find(x => x.val === v);
+    const o = cts.find(x => x.val === v);
     return `<span class="tag">${o ? o.label : v}</span>`;
   }).join('');
   const pTags = (r.protein || []).map(v => {
-    const o = PROTEINS.find(x => x.val === v);
+    const o = pts.find(x => x.val === v);
     return `<span class="tag">${o ? o.label : v}</span>`;
   }).join('');
   const isFav = isFavourite(r.id);
   return `<div class="recipe-card" onclick="${onclick}">
     ${cardVisualHtml(r)}
-    <button class="card-fav-badge" data-id="${r.id}" onclick="event.stopPropagation();toggleFavourite('${r.id}')" aria-label="${isFav ? 'Remove from favourites' : 'Add to favourites'}">${isFav ? '❤️' : '🤍'}</button>
+    <button class="card-fav-badge" data-id="${r.id}" onclick="event.stopPropagation();toggleFavourite('${r.id}')" aria-label="${isFav ? t('toast_fav_remove') : t('toast_fav_add')}">${isFav ? '❤️' : '🤍'}</button>
     ${r.likes ? `<div class="card-likes-badge">${fmtLikes(r.likes)}</div>` : ''}
     <div class="recipe-card-body">
       <div class="recipe-card-title">${escHtml(r.title)}</div>
       <div class="recipe-card-meta">
         ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-        ${(r._mealdb || r._spoonacular) ? `<span class="tag unsaved">＋ Save</span>` : ''}
+        ${(r._mealdb || r._spoonacular) ? `<span class="tag unsaved">${t('panel_unsaved')}</span>` : ''}
         ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min</span>` : ''}
         ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
         ${ctTags}${pTags}
@@ -911,7 +1098,7 @@ function toggleFavourite(id, refreshPanel = false) {
   if (!r) return;
   r.favourite = !r.favourite;
   saveData();
-  showToast(r.favourite ? '❤️ Added to favourites' : 'Removed from favourites');
+  showToast(r.favourite ? t('toast_fav_add') : t('toast_fav_remove'));
   if (refreshPanel) openRecipe(id); // refresh the open recipe panel
   render(); // re-render grid so card hearts update
 }
@@ -921,7 +1108,7 @@ function renderFavourites() {
   const favs = recipes.filter(r => r.favourite);
   if (favs.length === 0) {
     grid.innerHTML = `<div class="empty"><div class="big">❤️</div>
-      <p>No favourites yet.<br>Open a recipe and tap the<br>heart to add it here.</p></div>`;
+      <p>${t('fav_empty').replace(/\n/g, '<br>')}</p></div>`;
     return;
   }
   grid.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -929,84 +1116,65 @@ function renderFavourites() {
   </div>`;
 }
 
+function applyRecipeFilter(r, q) {
+  if (q && !r.title.toLowerCase().includes(q)) return false;
+  if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
+  if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
+  if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
+  if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
+  if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
+  return true;
+}
+
 function render() {
   const grid   = document.getElementById('recipe-grid');
   const search = (document.getElementById('search-input').value || '').trim();
   const q      = search.toLowerCase();
   const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime || filters.diet);
+  const recipeCount = lang === 'sv' ? 'recept' : 'recipes';
 
-  // ── Search mode: typed search OR filters that triggered a TheMealDB query ──
-  if (search.length >= 2 || hasFilters) {
-    if (mealDbSearching) {
-      const savedMatches = recipes.filter(r => {
-        if (q && !r.title.toLowerCase().includes(q)) return false;
-        if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
-        if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
-        return true;
-      });
-      let html = `<div class="grid-section-label">Searching recipes… ⏳</div>`;
-      html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
-      grid.innerHTML = html;
-      return;
-    }
-
-    // Filter helpers
-    function applyLiveFilters(r) {
-      if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
-      if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
-      return true;
-    }
-    const mdbFiltered = mealDbResults.filter(r => {
-      if (!applyLiveFilters(r)) return false;
-      if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
-      return true;
-    });
-    // Spoonacular: skip cookingType filter — the search query already targets the right method.
-    // Only apply protein and time filters on top of what Spoonacular returned.
-    const spcFiltered = spoonacularResults.filter(r => {
-      if (filters.protein && !(r.protein || []).includes(filters.protein)) return false;
-      if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
-      if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
-      return true;
-    });
-    const liveIds = new Set([...mdbFiltered, ...spcFiltered].map(r => r.id));
-    const savedMatches = recipes.filter(r => {
-      if (liveIds.has(r.id)) return false; // already shown in live results above
-      if (q && !r.title.toLowerCase().includes(q)) return false;
-      if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
-      if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
-      if (filters.time)    { const max = parseInt(filters.time);    if (r.time     && r.time     > max) return false; }
-      if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
-      if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
-      return true;
-    });
-
-    let html = '';
-    if (spcFiltered.length) {
-      html += `<div class="grid-section-label">Spoonacular — ${spcFiltered.length} recipes</div>`;
-      html += spcFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
-    }
-    if (mdbFiltered.length) {
-      const note = filters.time || filters.prepTime
-        ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(time filters don't apply)</span>` : '';
-      html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} recipes${note}</div>`;
-      html += mdbFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
-    }
-    if (savedMatches.length) {
-      html += `<div class="grid-section-label">Your saved recipes</div>`;
-      html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
-    }
-    if (!html) {
-      const what = search.length >= 2 ? `"${escHtml(search)}"` : 'active filters';
-      html = `<div class="empty"><div class="big">🔍</div><p>No recipes found for<br>${what}.</p></div>`;
-    }
-    grid.innerHTML = html;
+  // ── Still loading TheMealDB ──
+  if (mealDbLoading) {
+    grid.innerHTML = `<div class="empty"><div class="big">⏳</div>
+      <p>${lang === 'sv' ? 'Laddar alla recept från TheMealDB…' : 'Loading all recipes from TheMealDB…'}</p></div>`;
     return;
   }
 
-  // ── No active search: show prompt ──
-  grid.innerHTML = `<div class="empty"><div class="big">🔍</div>
-    <p>Search for a recipe above,<br>or use the filters to browse<br>by method, protein or diet.</p></div>`;
+  // ── Filter TheMealDB recipes locally (always — no API call) ──
+  const mdbFiltered = allMealDbRecipes.filter(r => applyRecipeFilter(r, q));
+
+  // ── Spoonacular: only shown when user has typed a search term ──
+  const spcFiltered = search.length >= 2
+    ? spoonacularResults.filter(r => applyRecipeFilter(r, q))
+    : [];
+
+  // ── Saved recipes: exclude IDs already shown in live sections ──
+  const liveIds = new Set([...mdbFiltered, ...spcFiltered].map(r => r.id));
+  const savedMatches = recipes.filter(r => !liveIds.has(r.id) && applyRecipeFilter(r, q));
+
+  let html = '';
+  if (spcFiltered.length) {
+    html += `<div class="grid-section-label">Spoonacular — ${spcFiltered.length} ${recipeCount}</div>`;
+    html += spcFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
+  }
+  if (mdbFiltered.length) {
+    html += `<div class="grid-section-label">TheMealDB — ${mdbFiltered.length} ${recipeCount}</div>`;
+    html += mdbFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
+  }
+  if (savedMatches.length) {
+    html += `<div class="grid-section-label">${t('grid_saved')}</div>`;
+    html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
+  }
+  if (!html) {
+    if (q || hasFilters) {
+      const what = q ? `"${escHtml(search)}"` : t('grid_empty_filters');
+      html = `<div class="empty"><div class="big">🔍</div><p>${t('grid_empty')}<br>${what}.</p></div>`;
+    } else {
+      // No recipes at all yet (very first use, no saved recipes, MealDB not loaded)
+      html = `<div class="empty"><div class="big">🍽</div><p>${t('grid_prompt').replace(/\n/g, '<br>')}</p></div>`;
+    }
+  }
+  grid.innerHTML = html;
 }
 
 
@@ -1025,24 +1193,26 @@ function escHtml(str) {
 // ═══════════════════════════════════════════════════
 function openRecipe(id) {
   let r = recipes.find(x => x.id === id);
-  if (!r) r = mealDbResults.find(x => x.id === id);
+  if (!r) r = allMealDbRecipes.find(x => x.id === id);
   if (!r) r = spoonacularResults.find(x => x.id === id);
   if (!r) return;
 
   const isSaved = !r._mealdb && !r._spoonacular;
 
+  const cts = getCookingTypes();
+  const pts = getProteins();
   const ctTags = (r.cookingType || []).map(v => {
-    const o = COOKING_TYPES.find(x => x.val === v);
+    const o = cts.find(x => x.val === v);
     return `<span class="tag">${o ? o.label : v}</span>`;
   }).join('');
   const pTags = (r.protein || []).map(v => {
-    const o = PROTEINS.find(x => x.val === v);
+    const o = pts.find(x => x.val === v);
     return `<span class="tag">${o ? o.label : v}</span>`;
   }).join('');
 
   let ingsHtml = '';
   if (r.ingredients && r.ingredients.length > 0) {
-    const label = `Ingredients${r.servings ? ' (' + r.servings + ' servings)' : ''}`;
+    const label = `${t('panel_ingredients')}${r.servings ? ' (' + r.servings + ' ' + t('panel_servings') + ')' : ''}`;
     // Shopping buttons always shown — auto-saves the MealDB recipe on first add
     const allAdded = r.ingredients.every(ing =>
       shoppingList.some(s => s.recipeId === r.id && s.name === ing.name)
@@ -1057,25 +1227,25 @@ function openRecipe(id) {
           <button class="add-to-list-btn ${added ? 'added' : ''}"
             id="ing-btn-${r.id}-${i}"
             onclick="toggleShoppingItem('${r.id}',${i})">
-            ${added ? '✓ Added' : '+ List'}
+            ${added ? t('panel_added') : t('panel_add_one')}
           </button>
         </div>`;
       }).join('')}
       <button class="btn btn-secondary" style="margin-top:14px" onclick="addAllIngredients('${r.id}')">
-        ${allAdded ? '✓ All on list' : '🛒 Add all to shopping list'}
+        ${allAdded ? t('panel_all_added') : t('panel_add_all')}
       </button>`;
   }
 
   const instructionsHtml = (r.instructions && r.instructions.length) ? `
-    <div class="section-title">Instructions</div>
+    <div class="section-title">${t('panel_instructions')}</div>
     <ol class="instructions-list">
       ${r.instructions.map(step => `<li>${escHtml(step)}</li>`).join('')}
     </ol>` : '';
 
   const actionsHtml = `<div style="margin-top:18px">
-    ${!isSaved ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">💾 Save to my recipes</button>` : ''}
-    ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn ${isSaved ? 'btn-primary' : 'btn-secondary'}">Open original recipe ↗</a>` : ''}
-    ${isSaved ? `<button class="btn btn-secondary" onclick="closePanel();showAddForm(recipes.find(x=>x.id==='${r.id}'))">✏️ Edit</button>` : ''}
+    ${!isSaved ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">${t('panel_save')}</button>` : ''}
+    ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn ${isSaved ? 'btn-primary' : 'btn-secondary'}">${t('panel_open')}</a>` : ''}
+    ${isSaved ? `<button class="btn btn-secondary" onclick="closePanel();showAddForm(recipes.find(x=>x.id==='${r.id}'))">${t('panel_edit')}</button>` : ''}
   </div>`;
 
   const fav = isFavourite(r.id) || (!isSaved && false);
@@ -1089,10 +1259,10 @@ function openRecipe(id) {
     <div class="panel-title">${escHtml(r.title)}</div>
     <div class="panel-meta">
       ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-      ${(r._mealdb || r._spoonacular) ? `<span class="tag unsaved">＋ Save</span>` : ''}
-      ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min prep</span>` : ''}
-      ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)} total</span>` : ''}
-      ${r.servings ? `<span class="tag">👥 ${r.servings} servings</span>` : ''}
+      ${(r._mealdb || r._spoonacular) ? `<span class="tag unsaved">${t('panel_unsaved')}</span>` : ''}
+      ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} ${t('panel_prep')}</span>` : ''}
+      ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)} ${t('panel_total')}</span>` : ''}
+      ${r.servings ? `<span class="tag">👥 ${r.servings} ${t('panel_servings')}</span>` : ''}
       ${ctTags}${pTags}
     </div>
     ${ingsHtml}
@@ -1131,10 +1301,10 @@ function toggleShoppingItem(recipeId, ingIndex) {
   const idx = shoppingList.findIndex(s => s.recipeId === recipeId && s.name === ing.name);
   if (idx >= 0) {
     shoppingList.splice(idx, 1);
-    showToast('Removed from shopping list');
+    showToast(t('toast_shop_remove'));
   } else {
     shoppingList.push({ id: uid(), recipeId, name: ing.name, amount: ing.amount, unit: ing.unit, checked: false, willyStatus: 'unknown' });
-    showToast('Added to shopping list!');
+    showToast(t('toast_shop_add'));
   }
   saveData();
 
@@ -1158,7 +1328,7 @@ function addAllIngredients(recipeId) {
     }
   });
   saveData();
-  showToast(added > 0 ? `${added} ingredients added!` : 'All already on list');
+  showToast(added > 0 ? `${added} ${lang === 'sv' ? 'ingredienser tillagda!' : 'ingredients added!'}` : t('toast_all_on_list'));
   openRecipe(recipeId);
 }
 
@@ -1180,7 +1350,7 @@ function clearChecked() {
 }
 
 function clearAll() {
-  if (confirm('Clear the entire shopping list?')) {
+  if (confirm(t('shop_confirm_clear'))) {
     shoppingList = [];
     saveData();
     renderShopping();
@@ -1203,54 +1373,49 @@ function hasGluten(recipe) {
 }
 
 // ── Classify a shopping item into a store category by name keywords ──
+// Note: trailing \b is intentionally omitted so plurals match (tomatoes, carrots, etc.)
 function classifyIngredient(name) {
   const n = name.toLowerCase();
 
-  // Produce — vegetables & fruits
-  if (/\b(carrot|onion|garlic|potato|tomato|pepper|lettuce|spinach|broccoli|cauliflower|mushroom|zucchini|courgette|cucumber|celery|leek|parsley|coriander|basil|thyme|rosemary|sage|dill|chives|mint|ginger|lemon|lime|orange|apple|banana|avocado|kale|cabbage|aubergine|eggplant|asparagus|corn|pumpkin|squash|beetroot|radish|spring onion|green onion|scallion|shallot|fennel|artichoke|bean sprout|bok choy|pak choi|arugula|rocket|chili|jalape|bell pepper|sweet potato|yam|turnip|parsnip|swede|mango|pineapple|strawberr|raspberr|blueberr|cherry|grape|peach|plum|pear|melon|watermelon|coconut|fig|date|apricot|kiwi|pomegranate|papaya|lychee|guava|pak choi|courgette|chilli)\b/.test(n)) return 'produce';
+  // Frozen — check first so "frozen peas" doesn't fall through to produce
+  if (/\bfrozen/.test(n)) return 'frozen';
 
-  // Dairy & Eggs
-  if (/\b(milk|cream|butter|cheese|yogurt|yoghurt|egg|creme fraiche|cr.me fra.che|sour cream|mozzarella|parmesan|cheddar|feta|brie|camembert|gouda|emmental|ricotta|mascarpone|halloumi|ghee|cottage cheese|cream cheese|quark|fromage)\b/.test(n)) return 'dairy';
+  // Produce — vegetables & fruits (no trailing \b so plurals & qualifiers match)
+  if (/\b(carrot|onion|garlic|potato|tomato|pepper|lettuce|spinach|broccoli|cauliflower|mushroom|zucchini|courgette|cucumber|celery|leek|parsley|coriander|basil|thyme|rosemary|sage|dill|chive|mint|ginger|lemon|lime|orange|apple|banana|avocado|kale|cabbage|aubergine|eggplant|asparagus|sweetcorn|corn on|pumpkin|squash|beetroot|beet|radish|spring onion|green onion|scallion|shallot|fennel|artichoke|bean sprout|bok choy|pak choi|arugula|rocket|chili|chilli|jalap|bell pepper|sweet potato|yam|turnip|parsnip|swede|mango|pineapple|strawberr|raspberr|blueberr|cherry|grape|peach|plum|pear|melon|watermelon|fig|apricot|kiwi|pomegranate|papaya|lychee|guava|herbs?|fresh herb|vegetable|veggie|salad|sprout|pak choi|pea shoot)/.test(n)) return 'produce';
 
-  // Meat & Fish
-  if (/\b(chicken|beef|pork|lamb|turkey|duck|veal|venison|rabbit|bacon|ham|sausage|mince|steak|fillet|loin|thigh|breast|wing|rib|brisket|salmon|tuna|cod|haddock|halibut|sea bass|trout|mackerel|sardine|anchovy|prawn|shrimp|lobster|crab|squid|octopus|mussel|clam|oyster|scallop|seafood|chorizo|salami|prosciutto|pepperoni|pancetta|lardon|deli|ground meat|ground beef|ground turkey|ground pork|ground chicken)\b/.test(n)) return 'meat';
+  // Dairy & Eggs (no trailing \b)
+  if (/\b(milk|cream|butter|cheese|yogurt|yoghurt|egg|creme fraiche|cr.me fra.che|sour cream|mozzarella|parmesan|cheddar|feta|brie|camembert|gouda|emmental|ricotta|mascarpone|halloumi|ghee|cottage cheese|cream cheese|quark|fromage|crème)/.test(n)) return 'dairy';
 
-  // Frozen
-  if (/\bfrozen\b/.test(n)) return 'frozen';
+  // Meat & Fish (no trailing \b)
+  if (/\b(chicken|beef|pork|lamb|turkey|duck|veal|venison|rabbit|bacon|ham|sausage|mince|steak|fillet|loin|thigh|breast|wing|rib|brisket|salmon|tuna|cod|haddock|halibut|sea bass|trout|mackerel|sardine|anchovy|prawn|shrimp|lobster|crab|squid|octopus|mussel|clam|oyster|scallop|seafood|chorizo|salami|prosciutto|pepperoni|pancetta|lardon|ground meat|ground beef|ground turkey|ground pork|ground chicken|diced (beef|pork|chicken|lamb)|minced)/.test(n)) return 'meat';
 
-  // Pantry — dry goods, canned, condiments, spices, oils, baking
-  if (/\b(flour|sugar|salt|pepper|oil|vinegar|pasta|rice|noodle|breadcrumb|oat|lentil|chickpea|kidney bean|black bean|cannellini|split pea|tomato paste|tomato sauce|tomato pure|canned|tinned|stock|broth|bouillon|soy sauce|worcestershire|tabasco|sriracha|ketchup|mustard|mayo|mayonnaise|honey|syrup|molasse|jam|marmalade|peanut butter|tahini|miso|oyster sauce|fish sauce|hoisin|teriyaki|balsamic|olive oil|vegetable oil|sunflower oil|coconut oil|sesame oil|rapeseed|canola oil|baking powder|baking soda|bicarbonate|yeast|cornstarch|cornflour|cocoa|chocolate|vanilla|cinnamon|cumin|turmeric|paprika|oregano|bay leaf|star anise|cardamom|clove|nutmeg|allspice|curry|chilli powder|cayenne|saffron|fennel seed|caraway|coriander seed|mustard seed|sesame seed|almond|walnut|pecan|cashew|pistachio|pine nut|hazelnut|peanut|raisin|sultana|dried|stock cube|coconut milk|coconut cream|tofu|tempeh|seitan|gelatin|agar|bread|wrap|tortilla|cracker|cereal|granola|dried herb|spice|seasoning|sauce|dressing|pickle|capers|olives|sun.dried|tinned tomato|passata|ras el hanout|za.atar|harissa|garam masala|five spice|mixed spice|dried fruit|dried berry|can of|jar of|packet of|bag of)\b/.test(n)) return 'pantry';
+  // Pantry — spices, oils, canned goods, dry goods, condiments, baking (no trailing \b)
+  if (/\b(flour|sugar|salt|pepper|oil|vinegar|pasta|rice|noodle|breadcrumb|oat|lentil|chickpea|kidney bean|black bean|cannellini|split pea|tomato paste|tomato sauce|tomato pure|passata|canned|tinned|stock|broth|bouillon|soy sauce|worcestershire|tabasco|sriracha|ketchup|mustard|mayo|mayonnaise|honey|syrup|molasse|jam|marmalade|peanut butter|tahini|miso|oyster sauce|fish sauce|hoisin|teriyaki|balsamic|olive oil|vegetable oil|sunflower oil|coconut oil|sesame oil|rapeseed|canola oil|baking powder|baking soda|bicarbonate|yeast|cornstarch|cornflour|cocoa|chocolate|vanilla|cinnamon|cumin|turmeric|paprika|oregano|bay leaf|star anise|cardamom|clove|nutmeg|allspice|curry|chilli powder|cayenne|saffron|fennel seed|caraway|coriander seed|mustard seed|sesame seed|almond|walnut|pecan|cashew|pistachio|pine nut|hazelnut|peanut|raisin|sultana|dried (fruit|berry|herb|spice)|stock cube|coconut milk|coconut cream|tofu|tempeh|seitan|gelatin|agar|bread|wrap|tortilla|cracker|cereal|granola|seasoning|sauce|dressing|pickle|caper|olive|sun.dried|ras el hanout|za.atar|harissa|garam masala|five spice|mixed spice|can of|jar of|packet of|bag of|herb mix|spice mix)/.test(n)) return 'pantry';
 
   return 'other';
 }
 
-const SHOPPING_CATEGORIES = [
-  { key: 'produce', label: '🥦 Produce' },
-  { key: 'dairy',   label: '🥛 Dairy & Eggs' },
-  { key: 'meat',    label: '🥩 Meat & Fish' },
-  { key: 'pantry',  label: '🫙 Pantry' },
-  { key: 'frozen',  label: '❄️ Frozen' },
-  { key: 'other',   label: '📦 Other' },
-];
+// SHOPPING_CATEGORIES replaced by getShoppingCategories() for bilingual support
 
 function renderShopping() {
   const el = document.getElementById('shopping-list-content');
   if (shoppingList.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="big">🛒</div><p>Shopping list is empty.<br>Open a recipe and tap<br>"Add all to shopping list".</p></div>`;
+    el.innerHTML = `<div class="empty"><div class="big">🛒</div><p>${t('shop_empty').replace(/\n/g, '<br>')}</p></div>`;
     return;
   }
 
   const unchecked = shoppingList.filter(s => !s.checked);
   const checked   = shoppingList.filter(s =>  s.checked);
+  const cats      = getShoppingCategories();
 
-  let html = `<button class="willys-check-btn" onclick="checkAllWillys()">🟢 Check Willys availability</button>`;
+  let html = `<button class="willys-check-btn" onclick="checkAllWillys()">${t('shop_willys')}</button>`;
 
   // Group unchecked by category
   const grouped = {};
-  SHOPPING_CATEGORIES.forEach(c => { grouped[c.key] = []; });
+  cats.forEach(c => { grouped[c.key] = []; });
   unchecked.forEach(item => { grouped[classifyIngredient(item.name)].push(item); });
 
-  SHOPPING_CATEGORIES.forEach(cat => {
+  cats.forEach(cat => {
     const items = grouped[cat.key];
     if (!items || items.length === 0) return;
     html += `<div class="shopping-section-label">${cat.label}</div>`;
@@ -1258,12 +1423,12 @@ function renderShopping() {
   });
 
   if (checked.length > 0) {
-    html += `<div class="shopping-section-label">✓ Done (${checked.length})</div>`;
+    html += `<div class="shopping-section-label">${t('shop_done')} (${checked.length})</div>`;
     html += checked.map(shoppingRowHtml).join('');
-    html += `<button class="btn btn-secondary" style="margin-top:12px" onclick="clearChecked()">Clear done</button>`;
+    html += `<button class="btn btn-secondary" style="margin-top:12px" onclick="clearChecked()">${t('shop_clear_done')}</button>`;
   }
 
-  html += `<button class="btn btn-secondary btn-danger" style="margin-top:8px" onclick="clearAll()">Clear entire list</button>`;
+  html += `<button class="btn btn-secondary btn-danger" style="margin-top:8px" onclick="clearAll()">${t('shop_clear_all')}</button>`;
   el.innerHTML = html;
 }
 
@@ -1272,8 +1437,8 @@ function shoppingRowHtml(item) {
   let badge;
   if      (item.willyStatus === 'available')   badge = `<button class="willys-badge available"   onclick="openWillys('${encoded}')">✅ Willys</button>`;
   else if (item.willyStatus === 'unavailable') badge = `<button class="willys-badge unavailable" onclick="openWillys('${encoded}')">❌ Willys</button>`;
-  else if (item.willyStatus === 'checking')    badge = `<button class="willys-badge checking"    disabled>⏳ Checking…</button>`;
-  else                                          badge = `<button class="willys-badge unknown"     onclick="openWillys('${encoded}')">Willys?</button>`;
+  else if (item.willyStatus === 'checking')    badge = `<button class="willys-badge checking"    disabled>${t('willys_checking')}</button>`;
+  else                                          badge = `<button class="willys-badge unknown"     onclick="openWillys('${encoded}')">${t('willys_unknown')}</button>`;
 
   return `<div class="shopping-item ${item.checked ? 'checked' : ''}" id="si-${item.id}">
     <div class="check-box ${item.checked ? 'checked' : ''}" onclick="toggleCheck('${item.id}')">${item.checked ? '✓' : ''}</div>
@@ -1324,17 +1489,17 @@ async function fetchRecipeFromUrl() {
   const statusEl  = document.getElementById('fetch-status');
   const btn       = document.getElementById('fetch-btn');
 
-  if (!url) { showToast('Paste a URL first'); return; }
+  if (!url) { showToast(t('fetch_no_url')); return; }
   if (!workerUrl) {
-    statusEl.textContent  = '⚠️ Set Worker URL in Settings first.';
+    statusEl.textContent  = t('fetch_no_worker');
     statusEl.style.color  = 'var(--danger)';
     return;
   }
 
-  btn.textContent = '⏳ Fetching…';
+  btn.textContent = t('fetch_fetching');
   btn.disabled    = true;
   statusEl.style.color   = 'var(--muted)';
-  statusEl.textContent   = 'Fetching recipe data from the page…';
+  statusEl.textContent   = t('fetch_status');
 
   try {
     const res  = await fetch(`${workerUrl}?url=${encodeURIComponent(url)}`);
@@ -1364,13 +1529,13 @@ async function fetchRecipeFromUrl() {
       renderIngredientEditor(converted);
     }
 
-    statusEl.textContent = '✅ Fetched! Review, pick a cooking method, then Save.';
+    statusEl.textContent = t('fetch_ok');
     statusEl.style.color = 'var(--accent)';
   } catch {
-    statusEl.textContent = '⚠️ Something went wrong. Check the Worker URL in Settings.';
+    statusEl.textContent = t('fetch_error');
     statusEl.style.color = 'var(--danger)';
   } finally {
-    btn.textContent = 'Fetch ▶';
+    btn.textContent = t('fetch_btn');
     btn.disabled    = false;
   }
 }
@@ -1390,9 +1555,9 @@ function addIngredientRow(ing) {
   const row = document.createElement('div');
   row.className = 'ing-row';
   row.innerHTML = `
-    <input class="form-input ing-name"   type="text" placeholder="Ingredient" value="${ing ? escHtml(ing.name) : ''}">
-    <input class="form-input ing-amount" type="text" placeholder="Amount"     value="${ing ? escHtml(ing.amount) : ''}">
-    <input class="form-input ing-unit"   type="text" placeholder="Unit"       value="${ing ? escHtml(ing.unit) : ''}">
+    <input class="form-input ing-name"   type="text" placeholder="${t('form_ing_ph')}"    value="${ing ? escHtml(ing.name) : ''}">
+    <input class="form-input ing-amount" type="text" placeholder="${t('form_amount_ph')}"  value="${ing ? escHtml(ing.amount) : ''}">
+    <input class="form-input ing-unit"   type="text" placeholder="${t('form_unit_ph')}"    value="${ing ? escHtml(ing.unit) : ''}">
     <button type="button" class="remove-ing-btn" onclick="this.parentElement.remove()">×</button>`;
   el.appendChild(row);
 }
@@ -1436,8 +1601,8 @@ function saveRecipe(e) {
   };
 
   const idx = recipes.findIndex(r => r.id === id);
-  if (idx >= 0) { recipes[idx] = recipe; showToast('Recipe updated!'); }
-  else          { recipes.unshift(recipe); showToast('Recipe saved!'); }
+  if (idx >= 0) { recipes[idx] = recipe; showToast(t('toast_updated')); }
+  else          { recipes.unshift(recipe); showToast(t('toast_saved')); }
 
   saveData();
   showView('browse');
@@ -1448,11 +1613,11 @@ function deleteRecipe() {
   if (!id) return;
   const r = recipes.find(x => x.id === id);
   const name = r ? r.title : 'this recipe';
-  if (!confirm(`⚠️ Permanently remove "${name}" from your collection?\n\nThis cannot be undone. Any shopping list items from this recipe will also be removed.`)) return;
+  if (!confirm(t('warn_delete_pre') + name + t('warn_delete_post'))) return;
   recipes = recipes.filter(r => r.id !== id);
   shoppingList = shoppingList.filter(s => s.recipeId !== id);
   saveData();
-  showToast('Recipe removed');
+  showToast(lang === 'sv' ? 'Recept borttaget' : 'Recipe removed');
   _editingRecipeId = null;
   showView('browse');
 }
@@ -1463,7 +1628,7 @@ function deleteRecipe() {
 function saveWorkerUrl() {
   workerUrl = document.getElementById('worker-url-input').value.trim();
   localStorage.setItem('workerUrl', workerUrl);
-  showToast('Worker URL saved!');
+  showToast(t('toast_worker_saved'));
 }
 
 // ═══════════════════════════════════════════════════
@@ -1552,7 +1717,7 @@ function importRecipes(e) {
       recipes.forEach(r => { if (!merged.some(m => m.id === r.id)) merged.push(r); });
       recipes = merged;
       saveData();
-      showToast(`${imported.length} recipes imported!`);
+      showToast(`${imported.length} ${lang === 'sv' ? 'recept importerade!' : 'recipes imported!'}`);
       showView('browse');
     } catch { alert('Invalid JSON file'); }
   };
@@ -1610,26 +1775,89 @@ function showToast(msg) {
     if (!dragging) return;
     dragging = false;
     const dy = e.changedTouches[0].clientY - startY;
-    panel.style.transition = 'transform 0.25s ease';
+    panel.style.transition = 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
     if (dy > 110) {
       panel.style.transform = `translateY(100vh)`;
-      setTimeout(() => {
-        closePanel();
+      panel.addEventListener('transitionend', function handler() {
+        panel.removeEventListener('transitionend', handler);
+        // Hide overlay and reset without snapping the panel back
+        document.getElementById('overlay').classList.remove('open');
+        if (!document.getElementById('filter-modal').classList.contains('open')) {
+          document.body.classList.remove('modal-open');
+        }
+        // Reset silently (panel is already off-screen)
+        panel.style.transition = 'none';
         panel.style.transform = '';
+        // Force reflow so the reset is not animated when panel opens next time
+        panel.getBoundingClientRect();
         panel.style.transition = '';
-      }, 250);
+      }, { once: true });
     } else {
       panel.style.transform = '';
-      setTimeout(() => { panel.style.transition = ''; }, 250);
+      panel.addEventListener('transitionend', function handler() {
+        panel.removeEventListener('transitionend', handler);
+        panel.style.transition = '';
+      }, { once: true });
     }
   });
 })();
 
 // ═══════════════════════════════════════════════════
+// Language
+// ═══════════════════════════════════════════════════
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.title = lang === 'sv' ? 'Receptfinnaren' : 'Recipe Finder';
+
+  // Update all data-i18n text nodes
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  // Update placeholder attributes
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+
+  // Update form chip labels
+  document.querySelectorAll('#f-cookingType .chip').forEach(c => {
+    const lbl = COOKING_TYPE_LABELS[c.getAttribute('data-val')];
+    if (lbl) c.textContent = lbl[lang];
+  });
+  document.querySelectorAll('#f-protein .chip').forEach(c => {
+    const lbl = PROTEIN_LABELS[c.getAttribute('data-val')];
+    if (lbl) c.textContent = lbl[lang];
+  });
+
+  // Highlight active lang button
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    const isActive = btn.getAttribute('data-lang') === lang;
+    btn.classList.toggle('btn-primary',   isActive);
+    btn.classList.toggle('btn-secondary', !isActive);
+  });
+
+  // Re-render filter chips and reset fetch btn if idle
+  updateFilterChips();
+  const fetchBtn = document.getElementById('fetch-btn');
+  if (fetchBtn && !fetchBtn.disabled) fetchBtn.textContent = t('fetch_btn');
+}
+
+function setLang(l) {
+  lang = l;
+  localStorage.setItem(LANG_KEY, l);
+  applyLang();
+  // Re-render whichever view is currently visible
+  const activeId = document.querySelector('.view.active')?.id;
+  if (activeId === 'view-favourites') renderFavourites();
+  else if (activeId === 'view-shopping') renderShopping();
+  else if (activeId === 'view-browse') render();
+}
+
+// ═══════════════════════════════════════════════════
 // Boot
 // ═══════════════════════════════════════════════════
 loadData();
-render();
+applyLang();
+loadAllMealDb(); // start fetching all TheMealDB recipes immediately on page load
 </script>
 </body>
 </html>
