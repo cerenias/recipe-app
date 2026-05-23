@@ -893,14 +893,14 @@ function isFavourite(id) {
   return !!(r && r.favourite);
 }
 
-function toggleFavourite(id) {
+function toggleFavourite(id, refreshPanel = false) {
   ensureSaved(id); // auto-save MealDB recipes when favourited
   const r = recipes.find(x => x.id === id);
   if (!r) return;
   r.favourite = !r.favourite;
   saveData();
   showToast(r.favourite ? '❤️ Added to favourites' : 'Removed from favourites');
-  openRecipe(id); // refresh panel
+  if (refreshPanel) openRecipe(id); // refresh panel heart button
   render();
 }
 
@@ -1081,7 +1081,7 @@ function openRecipe(id) {
   const fav = isFavourite(r.id) || (!isSaved && false);
   document.getElementById('panel-content').innerHTML = `
     <button class="panel-close" onclick="closePanel()" aria-label="Close">✕</button>
-    <button class="fav-toggle" onclick="toggleFavourite('${r.id}')" aria-label="Favourite">${fav ? '❤️' : '🤍'}</button>
+    <button class="fav-toggle" onclick="toggleFavourite('${r.id}', true)" aria-label="Favourite">${fav ? '❤️' : '🤍'}</button>
     ${panelVisualHtml(r)}
     <div class="panel-title">${escHtml(r.title)}</div>
     <div class="panel-meta">
