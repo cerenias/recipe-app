@@ -45,13 +45,19 @@
 
     /* ── Recipe grid ── */
     #recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .recipe-card { background: white; border-radius: var(--radius); padding: 14px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border: 1px solid var(--border); }
+    .recipe-card { background: white; border-radius: var(--radius); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border: 1px solid var(--border); overflow: hidden; }
     .recipe-card:active { opacity: 0.85; }
-    .recipe-card-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.3; }
+    .recipe-card-visual { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
+    .recipe-card-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+    .recipe-card-body { padding: 10px 12px 12px; }
+    .recipe-card-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
     .recipe-card-meta { display: flex; flex-wrap: wrap; gap: 4px; }
     .tag { font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #f0fdf4; color: var(--primary); font-weight: 500; }
     .tag.time { background: #fef3c7; color: #92400e; }
     .tag.site { background: #eff6ff; color: #1d4ed8; }
+    /* ── Detail panel image ── */
+    .panel-visual { width: 100%; height: 180px; display: flex; align-items: center; justify-content: center; font-size: 64px; border-radius: 12px; margin-bottom: 14px; }
+    .panel-img { width: 100%; height: 180px; object-fit: cover; border-radius: 12px; margin-bottom: 14px; display: block; }
 
     /* ── Empty state ── */
     .empty { text-align: center; padding: 48px 16px; color: var(--muted); grid-column: 1 / -1; }
@@ -174,6 +180,11 @@
     <div class="form-group">
       <label class="form-label">Länk till recept</label>
       <input class="form-input" type="url" id="f-url" required placeholder="https://www.koket.se/...">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Bild-URL (valfritt)</label>
+      <input class="form-input" type="url" id="f-image" placeholder="https://...jpg">
     </div>
 
     <div class="form-group">
@@ -421,6 +432,7 @@ function showAddForm(recipe) {
     document.getElementById('f-url').value = recipe.url;
     document.getElementById('f-time').value = recipe.time || '';
     document.getElementById('f-prep').value = recipe.prepTime || '';
+    document.getElementById('f-image').value = recipe.image || '';
     document.getElementById('f-servings').value = recipe.servings || '';
     document.getElementById('submit-btn').textContent = 'Uppdatera recept';
     document.getElementById('delete-btn').style.display = 'block';
@@ -495,6 +507,47 @@ function updateFilterChips() {
 }
 
 // ═══════════════════════════════════════════════════
+// Image helpers
+// ═══════════════════════════════════════════════════
+function recipeGradient(r) {
+  const p = (r.protein || [])[0] || '';
+  const g = {
+    kyckling:   'linear-gradient(135deg,#fef9c3,#fde68a)',
+    nötkött:    'linear-gradient(135deg,#fee2e2,#fca5a5)',
+    fläsk:      'linear-gradient(135deg,#fce7f3,#f9a8d4)',
+    fisk:       'linear-gradient(135deg,#dbeafe,#93c5fd)',
+    skaldjur:   'linear-gradient(135deg,#ffedd5,#fdba74)',
+    vegetarisk: 'linear-gradient(135deg,#d1fae5,#6ee7b7)',
+    vegan:      'linear-gradient(135deg,#dcfce7,#86efac)',
+  };
+  return g[p] || 'linear-gradient(135deg,#f3f4f6,#e5e7eb)';
+}
+
+function recipeEmoji(r) {
+  const ct = (r.cookingType || [])[0] || '';
+  const e = { ugn:'🫕', panna:'🍳', airfryer:'💨', gryta:'🍲', grill:'🔥', wok:'🥢', kokt:'💧' };
+  return e[ct] || '🍽';
+}
+
+function cardVisualHtml(r) {
+  if (r.image) {
+    return `<img class="recipe-card-img" src="${escHtml(r.image)}" alt="" loading="lazy"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="recipe-card-visual" style="display:none;background:${recipeGradient(r)}">${recipeEmoji(r)}</div>`;
+  }
+  return `<div class="recipe-card-visual" style="background:${recipeGradient(r)}">${recipeEmoji(r)}</div>`;
+}
+
+function panelVisualHtml(r) {
+  if (r.image) {
+    return `<img class="panel-img" src="${escHtml(r.image)}" alt=""
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="panel-visual" style="display:none;background:${recipeGradient(r)}">${recipeEmoji(r)}</div>`;
+  }
+  return `<div class="panel-visual" style="background:${recipeGradient(r)}">${recipeEmoji(r)}</div>`;
+}
+
+// ═══════════════════════════════════════════════════
 // Browse / Render
 // ═══════════════════════════════════════════════════
 function recipeCardHtml(r, onclick) {
@@ -507,12 +560,15 @@ function recipeCardHtml(r, onclick) {
     return `<span class="tag">${o ? o.label : v}</span>`;
   }).join('');
   return `<div class="recipe-card" onclick="${onclick}">
-    <div class="recipe-card-title">${escHtml(r.title)}</div>
-    <div class="recipe-card-meta">
-      ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-      ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min</span>` : ''}
-      ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
-      ${ctTags}${pTags}
+    ${cardVisualHtml(r)}
+    <div class="recipe-card-body">
+      <div class="recipe-card-title">${escHtml(r.title)}</div>
+      <div class="recipe-card-meta">
+        ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
+        ${r.prepTime ? `<span class="tag time">🔪 ${r.prepTime} min</span>` : ''}
+        ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
+        ${ctTags}${pTags}
+      </div>
     </div>
   </div>`;
 }
@@ -601,6 +657,7 @@ function openRecipe(id) {
   }
 
   document.getElementById('panel-content').innerHTML = `
+    ${panelVisualHtml(r)}
     <div class="panel-title">${escHtml(r.title)}</div>
     <div class="panel-meta">
       ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
@@ -818,6 +875,7 @@ function saveRecipe(e) {
     protein:     getSelected('f-protein'),
     time:       parseInt(document.getElementById('f-time').value) || null,
     prepTime:   parseInt(document.getElementById('f-prep').value) || null,
+    image:      document.getElementById('f-image').value.trim() || null,
     servings:   parseInt(document.getElementById('f-servings').value) || null,
     ingredients,
   };
