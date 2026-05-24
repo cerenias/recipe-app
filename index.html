@@ -1904,7 +1904,7 @@ function saveRecipe(e) {
 
   const idx = recipes.findIndex(r => r.id === id);
   if (idx >= 0) { recipes[idx] = recipe; showToast(t('toast_updated')); }
-  else          { recipes.unshift(recipe); showToast(t('toast_saved')); }
+  else          { recipe.favourite = true; recipes.unshift(recipe); showToast(t('toast_saved')); }
 
   saveData();
   showView('browse');
