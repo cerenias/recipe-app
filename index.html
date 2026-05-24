@@ -882,7 +882,13 @@ function showView(name) {
     updateFilterChips();
     loadAllMealDb(); // fetch all recipes on first visit; subsequent calls are no-ops
   }
-  if (name === 'favourites') renderFavourites();
+  if (name === 'favourites') {
+    renderFavourites();
+    // Silently pull latest data so changes from other devices show up
+    if (workerUrl && currentUser) {
+      loadFromCloud().then(() => renderFavourites());
+    }
+  }
   if (name === 'shopping')   renderShopping();
   if (name === 'settings') {
     document.getElementById('worker-url-input').value = workerUrl;
@@ -1366,9 +1372,8 @@ function renderFavourites() {
       <p>${t('fav_empty').replace(/\n/g, '<br>')}</p></div>`;
     return;
   }
-  grid.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    ${favs.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('')}
-  </div>`;
+  // Cards go directly into #favourites-grid so the responsive CSS grid applies
+  grid.innerHTML = favs.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
 }
 
 function applyRecipeFilter(r, q) {
