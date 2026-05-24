@@ -155,6 +155,11 @@
     /* ── Willys check all button ── */
     .willys-check-btn { width: 100%; padding: 13px; background: #d1fae5; color: #065f46; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 14px; font-family: inherit; }
     .willys-check-btn:active { opacity: 0.8; }
+    .shop-add-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .shop-add-input { flex: 1; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 15px; font-family: inherit; background: var(--card); color: var(--text); outline: none; }
+    .shop-add-input:focus { border-color: var(--accent); }
+    .shop-add-btn { padding: 11px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .shop-add-btn:active { opacity: 0.8; }
 
     .divider { height: 1px; background: var(--border); margin: 16px 0; }
 
@@ -218,6 +223,12 @@
 <!-- ── SHOPPING LIST VIEW ── -->
 <div id="view-shopping" class="view">
   <div class="view-header" data-i18n="header_shopping">🛒 Inköpslista</div>
+  <div class="shop-add-row">
+    <input id="shop-add-input" class="shop-add-input" type="text"
+      data-i18n-placeholder="shop_add_item" placeholder="Lägg till vara…"
+      onkeydown="if(event.key==='Enter')addManualShoppingItem()">
+    <button class="shop-add-btn" onclick="addManualShoppingItem()" data-i18n="shop_add_btn">Lägg till</button>
+  </div>
   <div id="shopping-list-content"></div>
 </div>
 
@@ -430,6 +441,7 @@ const T = {
     grid_time_note:"(time filters don't apply)",
     fav_empty:'No favourites yet.\nOpen a recipe and tap the\nheart to add it here.',
     shop_empty:'Shopping list is empty.\nOpen a recipe and tap\n"Add all to shopping list".',
+    shop_add_item:'Add item…', shop_add_btn:'Add',
     shop_willys:'🟢 Check Willys availability', shop_done:'✓ Done',
     shop_clear_done:'Clear done', shop_clear_all:'Clear entire list',
     shop_confirm_clear:'Clear the entire shopping list?',
@@ -497,6 +509,7 @@ const T = {
     grid_time_note:'(tidsfilter gäller ej)',
     fav_empty:'Inga favoriter ännu.\nÖppna ett recept och tryck\npå hjärtat för att lägga till det.',
     shop_empty:'Inköpslistan är tom.\nÖppna ett recept och tryck\n"Lägg allt i inköpslistan".',
+    shop_add_item:'Lägg till vara…', shop_add_btn:'Lägg till',
     shop_willys:'🟢 Kontrollera tillgänglighet på Willys', shop_done:'✓ Klart',
     shop_clear_done:'Rensa klara', shop_clear_all:'Rensa hela listan',
     shop_confirm_clear:'Rensa hela inköpslistan?',
@@ -1375,6 +1388,22 @@ function addAllIngredients(recipeId) {
   saveData();
   showToast(added > 0 ? `${added} ${lang === 'sv' ? 'ingredienser tillagda!' : 'ingredients added!'}` : t('toast_all_on_list'));
   openRecipe(recipeId);
+}
+
+function addManualShoppingItem() {
+  const input = document.getElementById('shop-add-input');
+  const raw = (input.value || '').trim();
+  if (!raw) return;
+  // Try to parse "2 dl mjölk" → amount + unit + name, or just use raw as name
+  const m = raw.match(/^([\d.,½¼¾⅓⅔]+)\s*([a-zA-ZåäöÅÄÖ]{1,6})\s+(.+)$/);
+  let name, amount, unit;
+  if (m) { amount = m[1]; unit = m[2]; name = m[3]; }
+  else   { name = raw; amount = ''; unit = ''; }
+  shoppingList.push({ id: uid(), recipeId: null, name, amount, unit, checked: false, willyStatus: 'unknown' });
+  saveData();
+  input.value = '';
+  renderShopping();
+  input.focus();
 }
 
 function toggleCheck(id) {
