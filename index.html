@@ -192,6 +192,17 @@
     @media (min-width: 1400px) {
       #recipe-grid, #favourites-grid { grid-template-columns: repeat(6, 1fr); }
     }
+    /* ── Login screen ── */
+    #login-screen { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px; }
+    #login-screen.hidden { display:none; }
+    #login-box { width:100%; max-width:360px; display:flex; flex-direction:column; gap:10px; }
+    .login-logo { font-size:52px; text-align:center; margin-bottom:4px; }
+    .login-app-name { font-size:22px; font-weight:800; text-align:center; color:var(--text); }
+    .login-subtitle { font-size:14px; color:var(--muted); text-align:center; margin-bottom:6px; }
+    .login-error { color:#dc2626; font-size:13px; text-align:center; min-height:18px; }
+    .btn-link { background:none; border:none; color:var(--accent); cursor:pointer; font-size:14px; font-family:inherit; padding:6px; width:100%; text-align:center; }
+    .btn-link:hover { text-decoration:underline; }
+    .sync-badge { font-size:11px; color:var(--muted); text-align:right; padding:2px 0 6px; }
   </style>
 </head>
 <body>
@@ -336,6 +347,10 @@
 <div id="view-settings" class="view">
   <div class="view-header" data-i18n="header_settings">⚙️ Inställningar</div>
 
+  <div class="settings-card" id="settings-auth-section">
+    <!-- filled by updateSettingsAuthSection() -->
+  </div>
+
   <div class="settings-card">
     <div class="settings-card-title" data-i18n="settings_lang_title">Språk / Language</div>
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -367,6 +382,26 @@
   <div class="settings-card" style="font-size:13px;color:var(--muted);line-height:1.5">
     <div class="settings-card-title" data-i18n="settings_about_title">Om appen</div>
     <span data-i18n="settings_about_text">Receptfinnaren · Recept sparas lokalt i din webbläsare (localStorage). Exportera JSON regelbundet som backup.</span>
+  </div>
+</div>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen" class="hidden">
+  <div id="login-box">
+    <div class="login-logo">🍽</div>
+    <div class="login-app-name">Receptfinnaren</div>
+    <div class="login-subtitle" data-i18n="login_subtitle">Logga in för att synka recept mellan enheter</div>
+    <div id="login-error" class="login-error"></div>
+    <input id="login-username" class="form-input" type="text"
+      autocomplete="username" autocapitalize="none" spellcheck="false"
+      data-i18n-placeholder="login_username_ph" placeholder="Användarnamn">
+    <input id="login-pin" class="form-input" type="password"
+      inputmode="numeric" autocomplete="current-password"
+      data-i18n-placeholder="login_pin_ph" placeholder="PIN-kod (minst 4 tecken)"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()" data-i18n="login_btn">Logga in</button>
+    <button class="btn btn-secondary" style="width:100%" onclick="doRegister()" data-i18n="register_btn">Skapa konto</button>
+    <button class="btn-link" onclick="skipLogin()" data-i18n="login_skip">Fortsätt utan konto →</button>
   </div>
 </div>
 
@@ -415,6 +450,7 @@
 const STORAGE_KEY  = 'receptfinnaren_v1';
 const SHOPPING_KEY = 'receptfinnaren_shopping_v1';
 const LANG_KEY     = 'receptfinnaren_lang';
+const AUTH_KEY     = 'receptfinnaren_auth';
 
 // ── Translations ────────────────────────────────────
 const T = {
@@ -468,6 +504,27 @@ const T = {
     fetch_no_url:'Paste a URL first',
     fetch_no_worker:'⚠️ Set Worker URL in Settings first.',
     fetch_error:'⚠️ Something went wrong. Check the Worker URL in Settings.',
+    login_title:'Log in or create an account',
+    login_subtitle:'Sign in to sync your recipes across devices',
+    login_username_ph:'Username (letters, numbers, _)',
+    login_pin_ph:'PIN (at least 4 characters)',
+    login_btn:'Log in', register_btn:'Create account',
+    login_skip:'Continue without account →',
+    login_fill_all:'Enter username and PIN',
+    login_pin_short:'PIN must be at least 4 characters',
+    login_no_worker:'Set your Worker URL in Settings first',
+    login_not_found:'Username not found',
+    login_wrong_pin:'Wrong PIN',
+    login_network_error:'Network error — check your connection',
+    login_taken:'Username already taken — try another',
+    login_bad_username:'Username: 2–20 characters, letters/numbers/underscore only',
+    register_success:'Account created and logged in! 🎉',
+    settings_account_title:'Account & sync',
+    settings_logged_in_as:'Logged in as',
+    settings_logout:'Log out',
+    settings_not_logged_in:'Not logged in — recipes are stored locally only.',
+    settings_login_btn:'Log in / Create account',
+    settings_configure_worker:'Set Worker URL above to enable sync.',
     settings_lang_title:'Language / Språk',
     settings_worker_title:'Willys Worker URL',
     settings_worker_desc:'For green availability badges in the app you need a Cloudflare Worker. Without a Worker you can still tap an ingredient to open a Willys search in your browser.',
@@ -537,6 +594,27 @@ const T = {
     fetch_no_url:'Klistra in en URL först',
     fetch_no_worker:'⚠️ Ange Worker-URL i Inställningar först.',
     fetch_error:'⚠️ Något gick fel. Kontrollera Worker-URL i Inställningar.',
+    login_title:'Logga in eller skapa konto',
+    login_subtitle:'Logga in för att synka recept mellan enheter',
+    login_username_ph:'Användarnamn (bokstäver, siffror, _)',
+    login_pin_ph:'PIN-kod (minst 4 tecken)',
+    login_btn:'Logga in', register_btn:'Skapa konto',
+    login_skip:'Fortsätt utan konto →',
+    login_fill_all:'Ange användarnamn och PIN',
+    login_pin_short:'PIN-koden måste ha minst 4 tecken',
+    login_no_worker:'Ange Worker-URL i Inställningar först',
+    login_not_found:'Användarnamnet finns inte',
+    login_wrong_pin:'Fel PIN-kod',
+    login_network_error:'Nätverksfel — kontrollera anslutningen',
+    login_taken:'Användarnamnet är upptaget — välj ett annat',
+    login_bad_username:'Användarnamn: 2–20 tecken, bara bokstäver/siffror/underscore',
+    register_success:'Konto skapat och inloggad! 🎉',
+    settings_account_title:'Konto & synk',
+    settings_logged_in_as:'Inloggad som',
+    settings_logout:'Logga ut',
+    settings_not_logged_in:'Inte inloggad — recept sparas bara lokalt.',
+    settings_login_btn:'Logga in / Skapa konto',
+    settings_configure_worker:'Ange Worker-URL ovan för att aktivera synk.',
     settings_lang_title:'Språk / Language',
     settings_worker_title:'Willys Worker URL',
     settings_worker_desc:'För gröna tillgänglighetsmärken behöver du en Cloudflare Worker. Utan Worker kan du trycka på en ingrediens för att öppna en Willys-sökning i webbläsaren.',
@@ -630,6 +708,8 @@ let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
 let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null, source: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
+let currentUser   = null; // { username, token } when logged in
+try { const a = localStorage.getItem(AUTH_KEY); if (a) currentUser = JSON.parse(a); } catch {}
 let allMealDbRecipes  = [];   // all ~315 TheMealDB recipes, loaded once on first browse
 let mealDbLoading    = false; // true while fetching all 26 letters
 let mealDbAllLoaded  = false; // true once fully loaded (persists across tab switches)
@@ -651,6 +731,138 @@ function loadData() {
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
   localStorage.setItem(SHOPPING_KEY, JSON.stringify(shoppingList));
+  saveToCloud(); // fire-and-forget sync
+}
+
+// ── Cloud sync ────────────────────────────────────────────────────────────────
+function showLoginScreen() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-error').textContent = '';
+}
+function hideLoginScreen() {
+  document.getElementById('login-screen').classList.add('hidden');
+}
+
+async function loadFromCloud() {
+  if (!workerUrl || !currentUser) return true;
+  try {
+    const res = await fetch(`${workerUrl}?action=load`, {
+      headers: { 'Authorization': `Bearer ${currentUser.token}` },
+    });
+    if (res.status === 401) return false; // expired session
+    if (!res.ok) return true;             // other error, keep local data
+    const data = await res.json();
+    if (data.error) return true;          // KV not bound etc.
+    if (Array.isArray(data.recipes))      recipes = data.recipes;
+    if (Array.isArray(data.shoppingList)) shoppingList = data.shoppingList;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
+    localStorage.setItem(SHOPPING_KEY, JSON.stringify(shoppingList));
+    return true;
+  } catch { return true; } // offline — keep local data
+}
+
+async function saveToCloud() {
+  if (!workerUrl || !currentUser) return;
+  try {
+    await fetch(`${workerUrl}?action=save`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentUser.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ recipes, shoppingList }),
+    });
+  } catch {} // silent fail — local copy is already saved
+}
+
+function loginErrorText(code) {
+  const map = {
+    login_not_found: t('login_not_found'),
+    login_wrong_pin: t('login_wrong_pin'),
+    login_taken:     t('login_taken'),
+    login_bad_username: t('login_bad_username'),
+  };
+  return map[code] || code;
+}
+
+async function doLogin() {
+  const username = (document.getElementById('login-username').value || '').trim();
+  const pin      = (document.getElementById('login-pin').value || '').trim();
+  const errEl    = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!username || !pin) { errEl.textContent = t('login_fill_all'); return; }
+  if (!workerUrl)         { errEl.textContent = t('login_no_worker'); return; }
+  try {
+    const res  = await fetch(`${workerUrl}?action=login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, pin }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = loginErrorText(data.error); return; }
+    currentUser = { username: data.username, token: data.token };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+    await loadFromCloud();
+    hideLoginScreen();
+    updateSettingsAuthSection();
+    render(); renderFavourites(); renderShopping();
+  } catch { errEl.textContent = t('login_network_error'); }
+}
+
+async function doRegister() {
+  const username = (document.getElementById('login-username').value || '').trim();
+  const pin      = (document.getElementById('login-pin').value || '').trim();
+  const errEl    = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!username || !pin) { errEl.textContent = t('login_fill_all'); return; }
+  if (!workerUrl)         { errEl.textContent = t('login_no_worker'); return; }
+  if (pin.length < 4)     { errEl.textContent = t('login_pin_short'); return; }
+  try {
+    const res  = await fetch(`${workerUrl}?action=register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, pin }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = loginErrorText(data.error); return; }
+    currentUser = { username: data.username, token: data.token };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
+    // Push any existing local recipes to cloud for the new account
+    await saveToCloud();
+    hideLoginScreen();
+    updateSettingsAuthSection();
+    showToast(t('register_success'));
+  } catch { errEl.textContent = t('login_network_error'); }
+}
+
+function skipLogin() {
+  hideLoginScreen();
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem(AUTH_KEY);
+  updateSettingsAuthSection();
+  if (workerUrl) showLoginScreen();
+}
+
+function updateSettingsAuthSection() {
+  const el = document.getElementById('settings-auth-section');
+  if (!el) return;
+  if (currentUser) {
+    el.innerHTML = `
+      <div class="settings-card-title" data-i18n="settings_account_title">${t('settings_account_title')}</div>
+      <div style="font-size:14px;margin-bottom:10px">${t('settings_logged_in_as')} <strong>${escHtml(currentUser.username)}</strong>
+        <span class="sync-badge">☁️ ${lang === 'sv' ? 'Synkar automatiskt' : 'Syncing automatically'}</span></div>
+      <button class="btn btn-secondary" onclick="doLogout()">${t('settings_logout')}</button>`;
+  } else {
+    el.innerHTML = `
+      <div class="settings-card-title">${t('settings_account_title')}</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:10px">${t('settings_not_logged_in')}</div>
+      ${workerUrl
+        ? `<button class="btn btn-primary" onclick="showLoginScreen()">${t('settings_login_btn')}</button>`
+        : `<div style="font-size:13px;color:var(--muted)">${t('settings_configure_worker')}</div>`}`;
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -674,6 +886,7 @@ function showView(name) {
   if (name === 'shopping')   renderShopping();
   if (name === 'settings') {
     document.getElementById('worker-url-input').value = workerUrl;
+    updateSettingsAuthSection();
   }
 }
 
@@ -1961,6 +2174,8 @@ function saveWorkerUrl() {
   workerUrl = document.getElementById('worker-url-input').value.trim();
   localStorage.setItem('workerUrl', workerUrl);
   showToast(t('toast_worker_saved'));
+  updateSettingsAuthSection();
+  if (workerUrl && !currentUser) showLoginScreen();
 }
 
 // ═══════════════════════════════════════════════════
@@ -2189,7 +2404,27 @@ function setLang(l) {
 // ═══════════════════════════════════════════════════
 loadData();
 applyLang();
+updateSettingsAuthSection();
 loadAllMealDb(); // start fetching all TheMealDB recipes immediately on page load
+
+// Show login screen if worker is configured but not logged in
+if (workerUrl && !currentUser) {
+  showLoginScreen();
+} else if (workerUrl && currentUser) {
+  // Token exists — verify it and pull latest data from cloud
+  loadFromCloud().then(ok => {
+    if (!ok) {
+      currentUser = null;
+      localStorage.removeItem(AUTH_KEY);
+      updateSettingsAuthSection();
+      showLoginScreen();
+    } else {
+      render();
+      renderShopping();
+      updateSettingsAuthSection();
+    }
+  });
+}
 </script>
 </body>
 </html>

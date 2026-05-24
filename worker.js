@@ -1,12 +1,21 @@
-// Cloudflare Worker — Willys availability proxy + Recipe URL scraper
-// Deploy at: https://dash.cloudflare.com → Workers & Pages → Create Worker
-// Paste this code, deploy, copy the URL, paste it in the app's Settings tab.
+// Cloudflare Worker — Receptfinnaren backend
+// Routes:
+//   ?q=           Willys availability check
+//   ?url=         Recipe URL scraper
+//   ?spc=         Spoonacular search
+//   ?spc_id=      Spoonacular instructions for one recipe
+//   ?action=      Auth + sync (register / login / load / save)
+//
+// Required bindings (Cloudflare dashboard → Worker → Settings → Variables):
+//   Secret: SPOONACULAR_KEY
+//   KV namespace: RECIPE_KV  (create in KV tab, then bind with variable name RECIPE_KV)
 
 export default {
   async fetch(request, env) {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Content-Type': 'application/json',
     };
 
@@ -14,25 +23,128 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    const url        = new URL(request.url);
-    const q          = url.searchParams.get('q');
-    const recipeUrl  = url.searchParams.get('url');
-    const spc        = url.searchParams.get('spc');
-    const spcId      = url.searchParams.get('spc_id');
+    const url       = new URL(request.url);
+    const q         = url.searchParams.get('q');
+    const recipeUrl = url.searchParams.get('url');
+    const spc       = url.searchParams.get('spc');
+    const spcId     = url.searchParams.get('spc_id');
+    const action    = url.searchParams.get('action');
 
     if (recipeUrl) return scrapeRecipe(recipeUrl, corsHeaders);
     if (spc)       return spoonacularSearch(spc, url.searchParams, env, corsHeaders);
     if (spcId)     return spoonacularInstructions(spcId, env, corsHeaders);
     if (q)         return checkWillys(q, corsHeaders);
+    if (action)    return handleAction(action, request, env, corsHeaders);
 
     return new Response(
-      JSON.stringify({ error: 'Missing parameter: use ?q= for Willys, ?url= for recipe scraping, ?spc= for Spoonacular search, or ?spc_id= for Spoonacular instructions' }),
+      JSON.stringify({ error: 'Missing parameter' }),
       { headers: corsHeaders }
     );
   },
 };
 
-// ── Spoonacular proxy ─────────────────────────────────────────────────────────
+// ── Auth + Sync ───────────────────────────────────────────────────────────────
+async function handleAction(action, request, env, corsHeaders) {
+  if (!env.RECIPE_KV) {
+    return new Response(
+      JSON.stringify({ error: 'RECIPE_KV namespace not bound — add it in Cloudflare Worker → Settings → KV Namespace Bindings (variable name: RECIPE_KV)' }),
+      { headers: corsHeaders, status: 500 }
+    );
+  }
+
+  // ── Register ──────────────────────────────────────────────────────────────
+  if (action === 'register') {
+    let body;
+    try { body = await request.json(); } catch { return errRes(corsHeaders, 'Invalid JSON'); }
+    const { username, pin } = body || {};
+    if (!username || !pin) return errRes(corsHeaders, 'username and pin required');
+
+    const uname = username.toLowerCase().trim();
+    if (!/^[a-z0-9_]{2,20}$/.test(uname))
+      return errRes(corsHeaders, 'Username must be 2–20 characters: letters, numbers, underscore');
+    if (String(pin).length < 4)
+      return errRes(corsHeaders, 'PIN must be at least 4 characters');
+
+    const existing = await env.RECIPE_KV.get(`user:${uname}`);
+    if (existing) return new Response(JSON.stringify({ error: 'Username already taken' }), { headers: corsHeaders, status: 409 });
+
+    const pinHash = await hashPin(uname, String(pin));
+    await env.RECIPE_KV.put(`user:${uname}`, JSON.stringify({ pinHash, createdAt: Date.now() }));
+
+    const token = generateToken();
+    await env.RECIPE_KV.put(`session:${token}`, JSON.stringify({ username: uname }), { expirationTtl: 30 * 24 * 60 * 60 });
+
+    return new Response(JSON.stringify({ ok: true, token, username: uname }), { headers: corsHeaders });
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  if (action === 'login') {
+    let body;
+    try { body = await request.json(); } catch { return errRes(corsHeaders, 'Invalid JSON'); }
+    const { username, pin } = body || {};
+    if (!username || !pin) return errRes(corsHeaders, 'username and pin required');
+
+    const uname = username.toLowerCase().trim();
+    const userJson = await env.RECIPE_KV.get(`user:${uname}`);
+    if (!userJson) return new Response(JSON.stringify({ error: 'login_not_found' }), { headers: corsHeaders, status: 401 });
+
+    const user = JSON.parse(userJson);
+    const pinHash = await hashPin(uname, String(pin));
+    if (pinHash !== user.pinHash)
+      return new Response(JSON.stringify({ error: 'login_wrong_pin' }), { headers: corsHeaders, status: 401 });
+
+    const token = generateToken();
+    await env.RECIPE_KV.put(`session:${token}`, JSON.stringify({ username: uname }), { expirationTtl: 30 * 24 * 60 * 60 });
+
+    return new Response(JSON.stringify({ ok: true, token, username: uname }), { headers: corsHeaders });
+  }
+
+  // ── Authenticated routes (load / save) ────────────────────────────────────
+  const authHeader = request.headers.get('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) return new Response(JSON.stringify({ error: 'Missing token' }), { headers: corsHeaders, status: 401 });
+
+  const sessionJson = await env.RECIPE_KV.get(`session:${token}`);
+  if (!sessionJson) return new Response(JSON.stringify({ error: 'session_expired' }), { headers: corsHeaders, status: 401 });
+
+  const { username } = JSON.parse(sessionJson);
+
+  if (action === 'load') {
+    const dataJson = await env.RECIPE_KV.get(`data:${username}`);
+    const data = dataJson ? JSON.parse(dataJson) : { recipes: [], shoppingList: [] };
+    return new Response(JSON.stringify(data), { headers: corsHeaders });
+  }
+
+  if (action === 'save') {
+    let body;
+    try { body = await request.json(); } catch { return errRes(corsHeaders, 'Invalid JSON'); }
+    await env.RECIPE_KV.put(`data:${username}`, JSON.stringify({
+      recipes:      body.recipes      || [],
+      shoppingList: body.shoppingList || [],
+    }));
+    return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+  }
+
+  return errRes(corsHeaders, 'Unknown action');
+}
+
+function errRes(corsHeaders, msg, status = 400) {
+  return new Response(JSON.stringify({ error: msg }), { headers: corsHeaders, status });
+}
+
+async function hashPin(username, pin) {
+  const data = new TextEncoder().encode(`${username}:${pin}`);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateToken() {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── Spoonacular search ────────────────────────────────────────────────────────
 async function spoonacularSearch(query, params, env, corsHeaders) {
   const key = env.SPOONACULAR_KEY;
   if (!key) {
@@ -103,11 +215,10 @@ async function spoonacularInstructions(id, env, corsHeaders) {
     // Fall back to plain-text instructions field (strip HTML tags, split on newlines/sentences)
     if (!steps.length && info.instructions) {
       const plain = info.instructions
-        .replace(/<[^>]+>/g, ' ')   // strip HTML
+        .replace(/<[^>]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/\s{2,}/g, ' ')
         .trim();
-      // Split on sentence boundaries or numbered steps
       plain.split(/(?:\r?\n)+|(?<=\.)\s+(?=[A-Z0-9])/)
         .map(s => s.trim())
         .filter(s => s.length > 4)
@@ -140,7 +251,6 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
 
     const html = await res.text();
 
-    // Find all JSON-LD <script> blocks and look for @type: Recipe
     const jsonLdRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
     let match, recipe = null;
 
@@ -164,7 +274,6 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
       );
     }
 
-    // ISO 8601 duration → minutes  e.g. "PT1H15M" → 75
     function parseDuration(str) {
       if (!str) return null;
       const m = str.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
@@ -172,7 +281,6 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
       return (parseInt(m[1] || 0) * 60) + parseInt(m[2] || 0);
     }
 
-    // Normalize instructions
     let instructions = [];
     const rawIns = recipe.recipeInstructions;
     if (Array.isArray(rawIns)) {
@@ -186,7 +294,6 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
       instructions = rawIns.split(/\n+/).map(s => s.trim()).filter(Boolean);
     }
 
-    // Normalize ingredients — try to split "300 g nötfärs" into {amount, unit, name}
     const ingredients = (recipe.recipeIngredient || []).map(ing => {
       const str = ing.trim();
       const m   = str.match(/^([\d.,½¼¾⅓⅔\s/-]+?)\s+([a-zA-ZåäöÅÄÖ]{1,10})\s+(.+)$/);
@@ -194,7 +301,6 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
       return { name: str, amount: '', unit: '' };
     });
 
-    // Normalize image
     let image = null;
     const img = recipe.image;
     if (img) {
@@ -206,7 +312,6 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
       }
     }
 
-    // Servings
     let servings = null;
     const y = Array.isArray(recipe.recipeYield) ? recipe.recipeYield[0] : recipe.recipeYield;
     if (y) { const m = String(y).match(/\d+/); if (m) servings = parseInt(m[0]); }
