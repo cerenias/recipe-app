@@ -210,6 +210,7 @@
   </div>
   <div id="filter-bar-diet">
     <button class="filter-chip" data-type="diet" onclick="openFilter('diet')" data-i18n-chip="filter_diet">Kost ▾</button>
+    <button class="filter-chip" data-type="source" onclick="openFilter('source')" data-i18n-chip="filter_source">Källa ▾</button>
   </div>
   <div id="recipe-grid"></div>
 </div>
@@ -422,9 +423,10 @@ const T = {
     header_browse:'🍽 Recipe Finder', header_favourites:'❤️ Favourites',
     header_shopping:'🛒 Shopping List', header_settings:'⚙️ Settings',
     search_placeholder:'Search TheMealDB or your saved recipes…',
-    filter_method:'Method', filter_protein:'Protein', filter_time:'Time', filter_prep:'Prep', filter_diet:'Diet',
+    filter_method:'Method', filter_protein:'Protein', filter_time:'Time', filter_prep:'Prep', filter_diet:'Diet', filter_source:'Source',
     filter_all:'All',
-    fm_cookingType:'Cooking method', fm_protein:'Protein', fm_time:'Time', fm_prepTime:'Prep time', fm_diet:'Dietary needs',
+    fm_cookingType:'Cooking method', fm_protein:'Protein', fm_time:'Time', fm_prepTime:'Prep time', fm_diet:'Dietary needs', fm_source:'Recipe source',
+    source_mealdb:'🌍 TheMealDB', source_spoonacular:'🥄 Spoonacular', source_saved:'⭐ My recipes',
     time_15:'⚡ Under 15 min', time_30:'🕒 Under 30 min', time_60:'⏱ Under 1 hour', time_999:'🕰 Any time',
     prep_5:'⚡ Max 5 min prep', prep_10:'🕒 Max 10 min prep', prep_15:'⏱ Max 15 min prep', prep_999:'🕰 Any',
     diet_glutenfree:'🌾 Gluten-free',
@@ -490,9 +492,10 @@ const T = {
     header_browse:'🍽 Receptfinnaren', header_favourites:'❤️ Favoriter',
     header_shopping:'🛒 Inköpslista', header_settings:'⚙️ Inställningar',
     search_placeholder:'Sök recept…',
-    filter_method:'Metod', filter_protein:'Protein', filter_time:'Tid', filter_prep:'Förb.', filter_diet:'Kost',
+    filter_method:'Metod', filter_protein:'Protein', filter_time:'Tid', filter_prep:'Förb.', filter_diet:'Kost', filter_source:'Källa',
     filter_all:'Alla',
-    fm_cookingType:'Tillagningsmetod', fm_protein:'Protein', fm_time:'Tid', fm_prepTime:'Förberedelsetid', fm_diet:'Kostbehov',
+    fm_cookingType:'Tillagningsmetod', fm_protein:'Protein', fm_time:'Tid', fm_prepTime:'Förberedelsetid', fm_diet:'Kostbehov', fm_source:'Receptkälla',
+    source_mealdb:'🌍 TheMealDB', source_spoonacular:'🥄 Spoonacular', source_saved:'⭐ Mina recept',
     time_15:'⚡ Under 15 min', time_30:'🕒 Under 30 min', time_60:'⏱ Under 1 timme', time_999:'🕰 Valfri tid',
     prep_5:'⚡ Max 5 min', prep_10:'🕒 Max 10 min', prep_15:'⏱ Max 15 min', prep_999:'🕰 Valfritt',
     diet_glutenfree:'🌾 Glutenfritt',
@@ -596,6 +599,13 @@ function getPrepOptions() {
   ];
 }
 function getDietOptions() { return [{ val:'glutenfree', label: t('diet_glutenfree') }]; }
+function getSourceOptions() {
+  return [
+    { val: 'mealdb',      label: t('source_mealdb') },
+    { val: 'spoonacular', label: t('source_spoonacular') },
+    { val: 'saved',       label: t('source_saved') },
+  ];
+}
 function getShoppingCategories() {
   return [
     { key:'produce', label: t('cat_produce') }, { key:'dairy', label: t('cat_dairy') },
@@ -618,7 +628,7 @@ const KNOWN_SITES = {
 let lang          = localStorage.getItem(LANG_KEY) || 'sv';
 let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
-let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null };
+let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null, source: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
 let allMealDbRecipes  = [];   // all ~315 TheMealDB recipes, loaded once on first browse
 let mealDbLoading    = false; // true while fetching all 26 letters
@@ -656,7 +666,7 @@ function showView(name) {
   if (name === 'browse') {
     document.getElementById('search-input').value = '';
     spoonacularResults = [];
-    filters = { cookingType: null, protein: null, time: null, prepTime: null, diet: null };
+    filters = { cookingType: null, protein: null, time: null, prepTime: null, diet: null, source: null };
     updateFilterChips();
     loadAllMealDb(); // fetch all recipes on first visit; subsequent calls are no-ops
   }
@@ -732,6 +742,7 @@ function openFilter(type) {
     time:        { labelKey: 'fm_time',        opts: getTimeOptions() },
     prepTime:    { labelKey: 'fm_prepTime',    opts: getPrepOptions() },
     diet:        { labelKey: 'fm_diet',        opts: getDietOptions() },
+    source:      { labelKey: 'fm_source',      opts: getSourceOptions() },
   };
   const cfg = cfgMap[type];
   const current = filters[type];
@@ -768,10 +779,10 @@ function maybeCloseFilter(e) {
 }
 
 function updateFilterChips() {
-  const defaultKeys = { cookingType: 'filter_method', protein: 'filter_protein', time: 'filter_time', prepTime: 'filter_prep', diet: 'filter_diet' };
+  const defaultKeys = { cookingType: 'filter_method', protein: 'filter_protein', time: 'filter_time', prepTime: 'filter_prep', diet: 'filter_diet', source: 'filter_source' };
   const allOpts = {
     cookingType: getCookingTypes(), protein: getProteins(),
-    time: getTimeOptions(), prepTime: getPrepOptions(), diet: getDietOptions(),
+    time: getTimeOptions(), prepTime: getPrepOptions(), diet: getDietOptions(), source: getSourceOptions(),
   };
 
   Object.keys(defaultKeys).forEach(type => {
@@ -1161,7 +1172,7 @@ function render() {
   const grid   = document.getElementById('recipe-grid');
   const search = (document.getElementById('search-input').value || '').trim();
   const q      = search.toLowerCase();
-  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime || filters.diet);
+  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime || filters.diet || filters.source);
   const recipeCount = lang === 'sv' ? 'recept' : 'recipes';
 
   // ── Still loading TheMealDB ──
@@ -1171,15 +1182,17 @@ function render() {
     return;
   }
 
+  const src = filters.source; // 'mealdb' | 'spoonacular' | 'saved' | null
+
   // ── Filter TheMealDB recipes locally (always — no API call) ──
-  const mdbFiltered = allMealDbRecipes.filter(r => applyRecipeFilter(r, q));
+  const mdbFiltered = (src && src !== 'mealdb') ? [] : allMealDbRecipes.filter(r => applyRecipeFilter(r, q));
 
   // ── Spoonacular: shown whenever results exist (triggered by typed search or filter chips) ──
-  const spcFiltered = spoonacularResults.filter(r => applyRecipeFilter(r, q));
+  const spcFiltered = (src && src !== 'spoonacular') ? [] : spoonacularResults.filter(r => applyRecipeFilter(r, q));
 
   // ── Saved recipes: exclude IDs already shown in live sections ──
   const liveIds = new Set([...mdbFiltered, ...spcFiltered].map(r => r.id));
-  const savedMatches = recipes.filter(r => !liveIds.has(r.id) && applyRecipeFilter(r, q));
+  const savedMatches = (src && src !== 'saved') ? [] : recipes.filter(r => !liveIds.has(r.id) && applyRecipeFilter(r, q));
 
   let html = '';
   if (spcFiltered.length) {
