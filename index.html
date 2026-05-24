@@ -45,7 +45,7 @@
     .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
 
     /* ── Recipe grid ── */
-    #recipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    #recipe-grid, #favourites-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .recipe-card { background: white; border-radius: var(--radius); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border: 1px solid var(--border); overflow: hidden; }
     .recipe-card:active { opacity: 0.85; }
     .recipe-card-visual { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
@@ -177,7 +177,7 @@
 
     /* ── Desktop layout — cards smaller, more columns (phone unaffected) ── */
     @media (min-width: 640px) {
-      #recipe-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      #recipe-grid, #favourites-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
       .recipe-card-body { padding: 7px 9px 9px; }
       .recipe-card-title { font-size: 11px; }
       .recipe-card-visual { font-size: 26px; }
@@ -187,10 +187,10 @@
       .grid-section-label { font-size: 11px; }
     }
     @media (min-width: 1100px) {
-      #recipe-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+      #recipe-grid, #favourites-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
     }
     @media (min-width: 1400px) {
-      #recipe-grid { grid-template-columns: repeat(6, 1fr); }
+      #recipe-grid, #favourites-grid { grid-template-columns: repeat(6, 1fr); }
     }
   </style>
 </head>
@@ -441,7 +441,7 @@ const T = {
     grid_time_note:"(time filters don't apply)",
     fav_empty:'No favourites yet.\nOpen a recipe and tap the\nheart to add it here.',
     shop_empty:'Shopping list is empty.\nOpen a recipe and tap\n"Add all to shopping list".',
-    shop_add_item:'Add item…', shop_add_btn:'Add',
+    shop_add_item:'Add item…', shop_add_btn:'Add', shop_copy:'📋 Copy list', shop_copied:'✓ Copied!',
     shop_willys:'🟢 Check Willys availability', shop_done:'✓ Done',
     shop_clear_done:'Clear done', shop_clear_all:'Clear entire list',
     shop_confirm_clear:'Clear the entire shopping list?',
@@ -509,7 +509,7 @@ const T = {
     grid_time_note:'(tidsfilter gäller ej)',
     fav_empty:'Inga favoriter ännu.\nÖppna ett recept och tryck\npå hjärtat för att lägga till det.',
     shop_empty:'Inköpslistan är tom.\nÖppna ett recept och tryck\n"Lägg allt i inköpslistan".',
-    shop_add_item:'Lägg till vara…', shop_add_btn:'Lägg till',
+    shop_add_item:'Lägg till vara…', shop_add_btn:'Lägg till', shop_copy:'📋 Kopiera lista', shop_copied:'✓ Kopierat!',
     shop_willys:'🟢 Kontrollera tillgänglighet på Willys', shop_done:'✓ Klart',
     shop_clear_done:'Rensa klara', shop_clear_all:'Rensa hela listan',
     shop_confirm_clear:'Rensa hela inköpslistan?',
@@ -1390,6 +1390,37 @@ function addAllIngredients(recipeId) {
   openRecipe(recipeId);
 }
 
+function copyShoppingList() {
+  const cats = getShoppingCategories();
+  const unchecked = shoppingList.filter(s => !s.checked);
+  const grouped = {};
+  cats.forEach(c => { grouped[c.key] = []; });
+  unchecked.forEach(item => { grouped[classifyIngredient(item.name)].push(item); });
+
+  const lines = [lang === 'sv' ? '🛒 Inköpslista' : '🛒 Shopping list', ''];
+  cats.forEach(cat => {
+    const items = grouped[cat.key];
+    if (!items || items.length === 0) return;
+    lines.push(cat.label);
+    items.forEach(item => {
+      const name = translateIngredient(item.name);
+      const amt  = [item.amount, item.unit].filter(Boolean).join(' ');
+      lines.push(amt ? `- ${amt} ${name}` : `- ${name}`);
+    });
+    lines.push('');
+  });
+
+  const text = lines.join('\n').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-list-btn');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = t('shop_copied');
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    }
+  });
+}
+
 function addManualShoppingItem() {
   const input = document.getElementById('shop-add-input');
   const raw = (input.value || '').trim();
@@ -1482,7 +1513,10 @@ function renderShopping() {
   const checked   = shoppingList.filter(s =>  s.checked);
   const cats      = getShoppingCategories();
 
-  let html = `<button class="willys-check-btn" onclick="checkAllWillys()">${t('shop_willys')}</button>`;
+  let html = `<div style="display:flex;gap:8px;margin-bottom:14px">
+    <button class="willys-check-btn" style="margin-bottom:0;flex:1" onclick="checkAllWillys()">${t('shop_willys')}</button>
+    <button class="btn btn-secondary" id="copy-list-btn" style="white-space:nowrap" onclick="copyShoppingList()">${t('shop_copy')}</button>
+  </div>`;
 
   // Group unchecked by category
   const grouped = {};
