@@ -1432,7 +1432,8 @@ function toggleFavourite(id, refreshPanel = false) {
   saveData();
   showToast(r.favourite ? t('toast_fav_add') : t('toast_fav_remove'));
   if (refreshPanel) openRecipe(id); // refresh the open recipe panel
-  render(); // re-render grid so card hearts update
+  render();            // re-render browse grid
+  renderFavourites();  // re-render wish list so heart goes grey and card disappears
 }
 
 function cookedCardHtml(r) {
