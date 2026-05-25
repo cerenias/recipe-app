@@ -242,6 +242,13 @@
 <!-- ── COOKED RECIPES VIEW ── -->
 <div id="view-cooked" class="view">
   <div class="view-header" data-i18n="header_cooked">🍴 Mina recept</div>
+  <div id="cooked-filter-bar">
+    <button class="filter-chip" id="cooked-sort-chip" onclick="openCookedSort()">📅 Senaste ▾</button>
+    <button class="filter-chip" data-cooked-type="cookingType" onclick="openFilter('cookingType','cooked')">Metod ▾</button>
+    <button class="filter-chip" data-cooked-type="protein" onclick="openFilter('protein','cooked')">Protein ▾</button>
+    <button class="filter-chip" data-cooked-type="time" onclick="openFilter('time','cooked')">Tid ▾</button>
+    <button class="filter-chip" data-cooked-type="diet" onclick="openFilter('diet','cooked')">Kost ▾</button>
+  </div>
   <div id="cooked-grid"></div>
 </div>
 
@@ -495,6 +502,7 @@ const T = {
     grid_time_note:"(time filters don't apply)",
     fav_empty:'Nothing on your wish list yet.\nTap the 📝 on any recipe to add it.',
     cooked_empty:'No cooked recipes yet.\nOpen a recipe and tap\n"Add to my recipes".',
+    cooked_sort:'Sort', sort_date:'📅 Most recent', sort_rating_desc:'⭐ Rating: high → low', sort_rating_asc:'⭐ Rating: low → high', sort_alpha:'🔤 A–Z',
     panel_mark_cooked:'🍴 Add to my recipes', panel_already_cooked:'🍴 In my recipes',
     panel_your_rating:'Your rating (1–10)', panel_comment_ph:'Notes, changes you made, serve with…',
     panel_save_rating:'Save',
@@ -589,6 +597,7 @@ const T = {
     grid_time_note:'(tidsfilter gäller ej)',
     fav_empty:'Önskelistan är tom.\nTryck på 📝 på ett recept för att lägga till det.',
     cooked_empty:'Inga lagade recept ännu.\nÖppna ett recept och tryck\n"Lägg till i mina recept".',
+    cooked_sort:'Sortera', sort_date:'📅 Senaste', sort_rating_desc:'⭐ Betyg: högt → lågt', sort_rating_asc:'⭐ Betyg: lågt → högt', sort_alpha:'🔤 A–Ö',
     panel_mark_cooked:'🍴 Lägg till i mina recept', panel_already_cooked:'🍴 I mina recept',
     panel_your_rating:'Ditt betyg (1–10)', panel_comment_ph:'Anteckningar, ändringar, servera med…',
     panel_save_rating:'Spara',
@@ -733,6 +742,9 @@ let shoppingList  = [];
 let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null, source: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
 let currentUser   = null; // { username, token } when logged in
+let cookedFilters = { cookingType: null, protein: null, time: null, diet: null };
+let cookedSort    = 'date_desc'; // date_desc | rating_desc | rating_asc | alpha
+let activeFilterCtx = 'browse'; // 'browse' | 'cooked' — which context openFilter writes to
 try { const a = localStorage.getItem(AUTH_KEY); if (a) currentUser = JSON.parse(a); } catch {}
 let allMealDbRecipes  = [];   // all ~315 TheMealDB recipes, loaded once on first browse
 let mealDbLoading    = false; // true while fetching all 26 letters
@@ -983,7 +995,8 @@ function showAddForm(recipe) {
 // ═══════════════════════════════════════════════════
 // Filter logic
 // ═══════════════════════════════════════════════════
-function openFilter(type) {
+function openFilter(type, ctx) {
+  activeFilterCtx = ctx || 'browse';
   const cfgMap = {
     cookingType: { labelKey: 'fm_cookingType', opts: getCookingTypes() },
     protein:     { labelKey: 'fm_protein',     opts: getProteins() },
@@ -992,8 +1005,8 @@ function openFilter(type) {
     diet:        { labelKey: 'fm_diet',        opts: getDietOptions() },
     source:      { labelKey: 'fm_source',      opts: getSourceOptions() },
   };
-  const cfg = cfgMap[type];
-  const current = filters[type];
+  const cfg     = cfgMap[type];
+  const current = (activeFilterCtx === 'cooked' ? cookedFilters : filters)[type];
 
   let html = `<div class="filter-modal-title">${t(cfg.labelKey)}</div><div class="chip-group">`;
   html += `<div class="chip ${!current ? 'selected' : ''}" onclick="setFilter('${type}', null)">${t('filter_all')}</div>`;
@@ -1007,14 +1020,43 @@ function openFilter(type) {
   document.body.classList.add('modal-open');
 }
 
-function setFilter(type, val) {
-  filters[type] = val;
+function openCookedSort() {
+  const opts = [
+    { val: 'date_desc',    label: t('sort_date') },
+    { val: 'rating_desc',  label: t('sort_rating_desc') },
+    { val: 'rating_asc',   label: t('sort_rating_asc') },
+    { val: 'alpha',        label: t('sort_alpha') },
+  ];
+  let html = `<div class="filter-modal-title">${t('cooked_sort')}</div><div class="chip-group">`;
+  opts.forEach(o => {
+    html += `<div class="chip ${cookedSort === o.val ? 'selected' : ''}" onclick="setCookedSort('${o.val}')">${o.label}</div>`;
+  });
+  html += `</div>`;
+  document.getElementById('filter-panel-content').innerHTML = html;
+  document.getElementById('filter-modal').classList.add('open');
+  document.body.classList.add('modal-open');
+}
+
+function setCookedSort(val) {
+  cookedSort = val;
   maybeCloseFilter();
-  updateFilterChips();
-  render(); // instant — TheMealDB is pre-loaded
-  const q = getSpoonacularQuery();
-  if (q) searchSpoonacularDebounced(q);
-  else   { spoonacularResults = []; render(); }
+  renderCooked();
+}
+
+function setFilter(type, val) {
+  if (activeFilterCtx === 'cooked') {
+    cookedFilters[type] = val;
+    maybeCloseFilter();
+    renderCooked(); // renderCooked calls updateCookedFilterChips internally
+  } else {
+    filters[type] = val;
+    maybeCloseFilter();
+    updateFilterChips();
+    render();
+    const q = getSpoonacularQuery();
+    if (q) searchSpoonacularDebounced(q);
+    else   { spoonacularResults = []; render(); }
+  }
 }
 
 function maybeCloseFilter(e) {
@@ -1393,28 +1435,86 @@ function toggleFavourite(id, refreshPanel = false) {
   render(); // re-render grid so card hearts update
 }
 
+function cookedCardHtml(r) {
+  const stars = r.rating
+    ? `<div style="font-size:13px;font-weight:700;color:var(--accent);margin:3px 0 2px">⭐ ${r.rating}<span style="font-weight:400;color:var(--muted)">/10</span></div>`
+    : '';
+  const comment = r.comment
+    ? `<div style="font-size:11px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">"${escHtml(r.comment)}"</div>`
+    : '';
+  return `<div class="recipe-card" onclick="openRecipe('${r.id}')">
+    ${cardVisualHtml(r)}
+    <div class="recipe-card-body">
+      <div class="recipe-card-title">${escHtml(r.title)}</div>
+      ${stars}
+      ${comment}
+      <div class="recipe-card-meta" style="margin-top:4px">
+        ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderCooked() {
   const grid = document.getElementById('cooked-grid');
-  const cooked = recipes.filter(r => r.cooked).sort((a, b) => (b.cookedAt || 0) - (a.cookedAt || 0));
-  if (cooked.length === 0) {
-    grid.innerHTML = `<div class="empty"><div class="big">🍴</div><p>${t('cooked_empty').replace(/\n/g, '<br>')}</p></div>`;
-    return;
+  if (!grid) return;
+
+  // Apply filters
+  let cooked = recipes.filter(r => r.cooked);
+  if (cookedFilters.cookingType) cooked = cooked.filter(r => (r.cookingType || []).includes(cookedFilters.cookingType));
+  if (cookedFilters.protein)     cooked = cooked.filter(r => (r.protein     || []).includes(cookedFilters.protein));
+  if (cookedFilters.time)        { const max = parseInt(cookedFilters.time); cooked = cooked.filter(r => !r.time || r.time <= max); }
+  if (cookedFilters.diet === 'glutenfree') cooked = cooked.filter(r => !hasGluten(r));
+
+  // Apply sort
+  switch (cookedSort) {
+    case 'rating_desc': cooked.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+    case 'rating_asc':  cooked.sort((a, b) => (a.rating || 0) - (b.rating || 0)); break;
+    case 'alpha':       cooked.sort((a, b) => a.title.localeCompare(b.title, lang)); break;
+    default:            cooked.sort((a, b) => (b.cookedAt || 0) - (a.cookedAt || 0)); break;
   }
-  grid.innerHTML = cooked.map(r => {
-    const ratingBadge = r.rating ? `<div class="card-rating-badge">⭐ ${r.rating}/10</div>` : '';
-    return `<div class="recipe-card" onclick="openRecipe('${r.id}')">
-      ${cardVisualHtml(r)}
-      ${ratingBadge}
-      <div class="recipe-card-body">
-        <div class="recipe-card-title">${escHtml(r.title)}</div>
-        <div class="recipe-card-meta">
-          ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
-          ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
-          ${r.comment ? `<span class="tag" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${escHtml(r.comment.slice(0,40))}"</span>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+
+  const allCooked = recipes.filter(r => r.cooked).length;
+  if (cooked.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="big">🍴</div><p>${
+      allCooked === 0 ? t('cooked_empty').replace(/\n/g, '<br>') :
+      (lang === 'sv' ? 'Inga recept matchar filtren.' : 'No recipes match the filters.')
+    }</p></div>`;
+  } else {
+    grid.innerHTML = cooked.map(cookedCardHtml).join('');
+  }
+
+  updateCookedFilterChips();
+}
+
+function updateCookedFilterChips() {
+  const defaultKeys = { cookingType: 'filter_method', protein: 'filter_protein', time: 'filter_time', diet: 'filter_diet' };
+  const allOpts = { cookingType: getCookingTypes(), protein: getProteins(), time: getTimeOptions(), diet: getDietOptions() };
+
+  Object.keys(defaultKeys).forEach(type => {
+    const chip = document.querySelector(`#cooked-filter-bar .filter-chip[data-cooked-type="${type}"]`);
+    if (!chip) return;
+    const val = cookedFilters[type];
+    if (val) {
+      const found = allOpts[type].find(o => o.val === val);
+      chip.textContent = (found ? found.label : val) + '  ✕';
+      chip.classList.add('active');
+      chip.onclick = () => { activeFilterCtx = 'cooked'; setFilter(type, null); };
+    } else {
+      chip.textContent = t(defaultKeys[type]) + ' ▾';
+      chip.classList.remove('active');
+      chip.onclick = () => openFilter(type, 'cooked');
+    }
+  });
+
+  const sortChip = document.getElementById('cooked-sort-chip');
+  if (sortChip) {
+    const labels = { date_desc: t('sort_date'), rating_desc: t('sort_rating_desc'), rating_asc: t('sort_rating_asc'), alpha: t('sort_alpha') };
+    const isDefault = cookedSort === 'date_desc';
+    sortChip.textContent = (labels[cookedSort] || t('sort_date')) + (isDefault ? ' ▾' : '  ✕');
+    sortChip.classList.toggle('active', !isDefault);
+    sortChip.onclick = isDefault ? openCookedSort : () => { setCookedSort('date_desc'); };
+  }
 }
 
 function markAsCooked(id) {
