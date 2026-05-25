@@ -18,16 +18,16 @@
       --nav-h: 64px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
 
     /* ── Navigation ── */
     #nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-h); background: white; border-top: 1px solid var(--border); display: flex; z-index: 100; safe-area-inset-bottom: env(safe-area-inset-bottom); padding-bottom: env(safe-area-inset-bottom); }
-    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 8px 4px; transition: background 0.15s; }
+    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 10px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 6px 2px; transition: background 0.15s; }
     .nav-btn.active { color: var(--primary); font-weight: 700; background: #f0fdf4; box-shadow: inset 0 3px 0 var(--primary); }
-    .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-icon { font-size: 20px; line-height: 1; }
 
     /* ── Views ── */
-    .view { display: none; padding: 16px 16px calc(var(--nav-h) + 24px); min-height: 100vh; }
+    .view { display: none; padding: 16px 16px calc(var(--nav-h) + 24px); min-height: 100dvh; }
     .view.active { display: block; }
     .view-header { font-size: 22px; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
 
@@ -45,7 +45,7 @@
     .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
 
     /* ── Recipe grid ── */
-    #recipe-grid, #favourites-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    #recipe-grid, #favourites-grid, #cooked-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .recipe-card { background: white; border-radius: var(--radius); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border: 1px solid var(--border); overflow: hidden; }
     .recipe-card:active { opacity: 0.85; }
     .recipe-card-visual { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; }
@@ -177,7 +177,7 @@
 
     /* ── Desktop layout — cards smaller, more columns (phone unaffected) ── */
     @media (min-width: 640px) {
-      #recipe-grid, #favourites-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      #recipe-grid, #favourites-grid, #cooked-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
       .recipe-card-body { padding: 7px 9px 9px; }
       .recipe-card-title { font-size: 11px; }
       .recipe-card-visual { font-size: 26px; }
@@ -187,11 +187,18 @@
       .grid-section-label { font-size: 11px; }
     }
     @media (min-width: 1100px) {
-      #recipe-grid, #favourites-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+      #recipe-grid, #favourites-grid, #cooked-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
     }
     @media (min-width: 1400px) {
-      #recipe-grid, #favourites-grid { grid-template-columns: repeat(6, 1fr); }
+      #recipe-grid, #favourites-grid, #cooked-grid { grid-template-columns: repeat(6, 1fr); }
     }
+    /* ── Cooked / rating ── */
+    .cooked-section { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .rating-row { display: flex; gap: 5px; flex-wrap: wrap; margin: 10px 0 14px; }
+    .rating-btn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.12s; }
+    .rating-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .rating-btn:hover { border-color: var(--accent); }
+    .card-rating-badge { position: absolute; bottom: 4px; left: 4px; background: var(--accent); color: #fff; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 2px 6px; }
     /* ── Login screen ── */
     #login-screen { position:fixed; inset:0; background:var(--bg); z-index:1000; display:flex; align-items:center; justify-content:center; padding:24px; }
     #login-screen.hidden { display:none; }
@@ -226,10 +233,16 @@
   <div id="recipe-grid"></div>
 </div>
 
-<!-- ── FAVOURITES VIEW ── -->
+<!-- ── FAVOURITES / WISH LIST VIEW ── -->
 <div id="view-favourites" class="view">
-  <div class="view-header" data-i18n="header_favourites">❤️ Favoriter</div>
+  <div class="view-header" data-i18n="header_favourites">📝 Önskelista</div>
   <div id="favourites-grid"></div>
+</div>
+
+<!-- ── COOKED RECIPES VIEW ── -->
+<div id="view-cooked" class="view">
+  <div class="view-header" data-i18n="header_cooked">🍴 Mina recept</div>
+  <div id="cooked-grid"></div>
 </div>
 
 <!-- ── SHOPPING LIST VIEW ── -->
@@ -411,7 +424,10 @@
     <span class="nav-icon">🍽</span><span data-i18n="nav_browse">Recept</span>
   </button>
   <button class="nav-btn" id="nav-favourites" onclick="showView('favourites')">
-    <span class="nav-icon">❤️</span><span data-i18n="nav_favs">Favoriter</span>
+    <span class="nav-icon">📝</span><span data-i18n="nav_favs">Önskelista</span>
+  </button>
+  <button class="nav-btn" id="nav-cooked" onclick="showView('cooked')">
+    <span class="nav-icon">🍴</span><span data-i18n="nav_cooked">Lagade</span>
   </button>
   <button class="nav-btn" id="nav-shopping" onclick="showView('shopping')">
     <span class="nav-icon">🛒</span><span data-i18n="nav_shopping">Handla</span>
@@ -455,8 +471,8 @@ const AUTH_KEY     = 'receptfinnaren_auth';
 // ── Translations ────────────────────────────────────
 const T = {
   en: {
-    nav_browse:'Recipes', nav_favs:'Favs', nav_shopping:'Shop', nav_add:'Add', nav_settings:'Settings',
-    header_browse:'🍽 Recipe Finder', header_favourites:'❤️ Favourites',
+    nav_browse:'Recipes', nav_favs:'Wish list', nav_cooked:'Cooked', nav_shopping:'Shop', nav_add:'Add', nav_settings:'Settings',
+    header_browse:'🍽 Recipe Finder', header_favourites:'📝 Wish List', header_cooked:'🍴 My Recipes',
     header_shopping:'🛒 Shopping List', header_settings:'⚙️ Settings',
     search_placeholder:'Search TheMealDB or your saved recipes…',
     filter_method:'Method', filter_protein:'Protein', filter_time:'Time', filter_prep:'Prep', filter_diet:'Diet', filter_source:'Source',
@@ -477,7 +493,11 @@ const T = {
     grid_prompt:'Search for a recipe above,\nor use the filters to browse\nby method, protein or diet.',
     grid_empty:'No recipes found for', grid_empty_filters:'active filters',
     grid_time_note:"(time filters don't apply)",
-    fav_empty:'No favourites yet.\nOpen a recipe and tap the\nheart to add it here.',
+    fav_empty:'Nothing on your wish list yet.\nTap the 📝 on any recipe to add it.',
+    cooked_empty:'No cooked recipes yet.\nOpen a recipe and tap\n"Add to my recipes".',
+    panel_mark_cooked:'🍴 Add to my recipes', panel_already_cooked:'🍴 In my recipes',
+    panel_your_rating:'Your rating (1–10)', panel_comment_ph:'Notes, changes you made, serve with…',
+    panel_save_rating:'Save',
     shop_empty:'Shopping list is empty.\nOpen a recipe and tap\n"Add all to shopping list".',
     shop_add_item:'Add item…', shop_add_btn:'Add', shop_copy:'📋 Copy list', shop_copied:'✓ Copied!',
     shop_willys:'🟢 Check Willys availability', shop_done:'✓ Done',
@@ -545,8 +565,8 @@ const T = {
     warn_delete_pre:'⚠️ Permanently remove "', warn_delete_post:'" from your collection?\n\nThis cannot be undone. Any shopping list items from this recipe will also be removed.',
   },
   sv: {
-    nav_browse:'Recept', nav_favs:'Favoriter', nav_shopping:'Handla', nav_add:'Ny', nav_settings:'Inst.',
-    header_browse:'🍽 Receptfinnaren', header_favourites:'❤️ Favoriter',
+    nav_browse:'Recept', nav_favs:'Önskelista', nav_cooked:'Lagade', nav_shopping:'Handla', nav_add:'Ny', nav_settings:'Inst.',
+    header_browse:'🍽 Receptfinnaren', header_favourites:'📝 Önskelista', header_cooked:'🍴 Mina recept',
     header_shopping:'🛒 Inköpslista', header_settings:'⚙️ Inställningar',
     search_placeholder:'Sök recept…',
     filter_method:'Metod', filter_protein:'Protein', filter_time:'Tid', filter_prep:'Förb.', filter_diet:'Kost', filter_source:'Källa',
@@ -567,7 +587,11 @@ const T = {
     grid_prompt:'Sök efter ett recept ovan,\neller använd filtren för att\nbläddra efter metod, protein eller kost.',
     grid_empty:'Inga recept hittades för', grid_empty_filters:'aktiva filter',
     grid_time_note:'(tidsfilter gäller ej)',
-    fav_empty:'Inga favoriter ännu.\nÖppna ett recept och tryck\npå hjärtat för att lägga till det.',
+    fav_empty:'Önskelistan är tom.\nTryck på 📝 på ett recept för att lägga till det.',
+    cooked_empty:'Inga lagade recept ännu.\nÖppna ett recept och tryck\n"Lägg till i mina recept".',
+    panel_mark_cooked:'🍴 Lägg till i mina recept', panel_already_cooked:'🍴 I mina recept',
+    panel_your_rating:'Ditt betyg (1–10)', panel_comment_ph:'Anteckningar, ändringar, servera med…',
+    panel_save_rating:'Spara',
     shop_empty:'Inköpslistan är tom.\nÖppna ett recept och tryck\n"Lägg allt i inköpslistan".',
     shop_add_item:'Lägg till vara…', shop_add_btn:'Lägg till', shop_copy:'📋 Kopiera lista', shop_copied:'✓ Kopierat!',
     shop_willys:'🟢 Kontrollera tillgänglighet på Willys', shop_done:'✓ Klart',
@@ -884,9 +908,14 @@ function showView(name) {
   }
   if (name === 'favourites') {
     renderFavourites();
-    // Silently pull latest data so changes from other devices show up
     if (workerUrl && currentUser) {
       loadFromCloud().then(() => renderFavourites());
+    }
+  }
+  if (name === 'cooked') {
+    renderCooked();
+    if (workerUrl && currentUser) {
+      loadFromCloud().then(() => renderCooked());
     }
   }
   if (name === 'shopping')   renderShopping();
@@ -1364,6 +1393,55 @@ function toggleFavourite(id, refreshPanel = false) {
   render(); // re-render grid so card hearts update
 }
 
+function renderCooked() {
+  const grid = document.getElementById('cooked-grid');
+  const cooked = recipes.filter(r => r.cooked).sort((a, b) => (b.cookedAt || 0) - (a.cookedAt || 0));
+  if (cooked.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="big">🍴</div><p>${t('cooked_empty').replace(/\n/g, '<br>')}</p></div>`;
+    return;
+  }
+  grid.innerHTML = cooked.map(r => {
+    const ratingBadge = r.rating ? `<div class="card-rating-badge">⭐ ${r.rating}/10</div>` : '';
+    return `<div class="recipe-card" onclick="openRecipe('${r.id}')">
+      ${cardVisualHtml(r)}
+      ${ratingBadge}
+      <div class="recipe-card-body">
+        <div class="recipe-card-title">${escHtml(r.title)}</div>
+        <div class="recipe-card-meta">
+          ${r.site ? `<span class="tag site">${escHtml(r.site)}</span>` : ''}
+          ${r.time ? `<span class="tag time">⏱ ${fmtTime(r.time)}</span>` : ''}
+          ${r.comment ? `<span class="tag" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${escHtml(r.comment.slice(0,40))}"</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function markAsCooked(id) {
+  ensureSaved(id);
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  if (!r.cooked) { r.cooked = true; r.cookedAt = Date.now(); }
+  saveData();
+  openRecipe(id); // re-render panel with rating section visible
+}
+
+function saveRatingComment(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  const ratingEl  = document.querySelector('.rating-btn.selected');
+  const commentEl = document.getElementById('cooked-comment');
+  if (ratingEl)  r.rating  = parseInt(ratingEl.dataset.val);
+  if (commentEl) r.comment = commentEl.value.trim();
+  saveData();
+  showToast(t('panel_save_rating') + ' ✓');
+  renderCooked();
+}
+
+function selectRating(val, id) {
+  document.querySelectorAll('.rating-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.val) === val));
+}
+
 function renderFavourites() {
   const grid = document.getElementById('favourites-grid');
   const favs = recipes.filter(r => r.favourite);
@@ -1508,7 +1586,16 @@ function openRecipe(id) {
     ${!isSaved ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">${t('panel_save')}</button>` : ''}
     ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn ${isSaved ? 'btn-primary' : 'btn-secondary'}">${t('panel_open')}</a>` : ''}
     ${isSaved ? `<button class="btn btn-secondary" onclick="closePanel();showAddForm(recipes.find(x=>x.id==='${r.id}'))">${t('panel_edit')}</button>` : ''}
-  </div>`;
+    <button class="btn ${r.cooked ? 'btn-secondary' : 'btn-secondary'}" onclick="markAsCooked('${r.id}')">${r.cooked ? t('panel_already_cooked') : t('panel_mark_cooked')}</button>
+  </div>
+  ${r.cooked ? `<div class="cooked-section">
+    <div class="section-title">${t('panel_your_rating')}</div>
+    <div class="rating-row">
+      ${[1,2,3,4,5,6,7,8,9,10].map(n => `<button class="rating-btn ${r.rating === n ? 'selected' : ''}" data-val="${n}" onclick="selectRating(${n},'${r.id}')">${n}</button>`).join('')}
+    </div>
+    <textarea id="cooked-comment" class="form-input" rows="3" placeholder="${t('panel_comment_ph')}" style="resize:vertical">${escHtml(r.comment || '')}</textarea>
+    <button class="btn btn-primary" style="margin-top:10px" onclick="saveRatingComment('${r.id}')">${t('panel_save_rating')}</button>
+  </div>` : ''}`;
 
   const fav = isFavourite(r.id) || (!isSaved && false);
   document.getElementById('panel-content').innerHTML = `
