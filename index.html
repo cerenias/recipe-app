@@ -2843,42 +2843,129 @@ function scoreRecipeMatch(recipe, detected) {
   };
 }
 
+let scannerAllResults  = []; // full scored pool, grows when Spoonacular is fetched
+let scannerMealFilter  = null;
+let scannerSrcFilter   = null;
+let scannerSpcFetched  = false;
+
 function runIngredientMatch() {
   if (!scannerIngredients.length) {
     showToast(lang === 'sv' ? 'Lägg till ingredienser först' : 'Add some ingredients first');
     return;
   }
+  // Reset filter state for a fresh search
+  scannerMealFilter = null;
+  scannerSrcFilter  = null;
+  scannerSpcFetched = false;
+
   // All recipes across all sources, deduplicated
   const seen = new Set();
   const allRecipes = [...spoonacularResults, ...allMealDbRecipes, ...recipes]
     .filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
 
-  const results = allRecipes
+  scannerAllResults = allRecipes
     .map(r => scoreRecipeMatch(r, scannerIngredients))
     .filter(Boolean)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 20);
+    .slice(0, 40);
 
-  renderScannerResults(results);
+  renderScannerResults();
 }
 
-function renderScannerResults(results) {
-  scannerState = 'results';
-  const title = document.getElementById('scanner-title');
-  const body  = document.getElementById('scanner-body');
-  title.textContent = `🍽 ${results.length} ${t('scanner_ingredients')}`;
+async function triggerScannerSpoonacular() {
+  if (!workerUrl || !scannerIngredients.length) return;
+  const btn = document.getElementById('scanner-spc-btn');
+  if (btn) { btn.disabled = true; btn.textContent = `⏳ ${lang === 'sv' ? 'Söker…' : 'Searching…'}`; }
 
-  if (!results.length) {
-    body.innerHTML = `
-      <div style="text-align:center;padding:32px 16px">
-        <div style="font-size:40px;margin-bottom:12px">🤷</div>
-        <p style="color:var(--muted)">${t('scanner_no_results')}</p>
-        <button onclick="setScannerState('ingredients')" class="btn btn-secondary" style="margin-top:16px">${t('scanner_back')}</button>
-      </div>`;
+  // Use first 2-3 detected ingredients as the search query
+  const q = scannerIngredients.slice(0, 3).join(' ');
+  const spcNew = await searchSpoonacular(q);
+  scannerSpcFetched = true;
+
+  // Score and merge new results, skip already-in-pool IDs
+  const existingIds = new Set(scannerAllResults.map(x => x.recipe.id));
+  for (const r of spcNew) {
+    if (!existingIds.has(r.id)) {
+      const scored = scoreRecipeMatch(r, scannerIngredients);
+      if (scored) scannerAllResults.push(scored);
+    }
+  }
+  scannerAllResults.sort((a, b) => b.score - a.score);
+
+  renderScannerResults(); // rebuild shell (removes Spoonacular button, updates chips)
+}
+
+function setScannerFilter(type, val) {
+  if (type === 'meal') scannerMealFilter = val;
+  if (type === 'src')  scannerSrcFilter  = val;
+  renderScannerResultCards(); // just update cards + title, keep shell
+}
+
+function renderScannerResults() {
+  scannerState = 'results';
+  const body = document.getElementById('scanner-body');
+
+  const ingSummary = scannerIngredients.slice(0, 5).join(', ') +
+    (scannerIngredients.length > 5 ? ` +${scannerIngredients.length - 5}` : '');
+
+  // ── Meal type filter chips ──
+  const mealOpts = getMealTypeOptions();
+  const mealChipAll = `<button class="filter-chip${!scannerMealFilter ? ' active' : ''}" style="font-size:13px;padding:6px 12px" onclick="setScannerFilter('meal',null)">${t('filter_all')}</button>`;
+  const mealChips = mealOpts.map(o =>
+    `<button class="filter-chip${scannerMealFilter === o.val ? ' active' : ''}" style="font-size:13px;padding:6px 12px" onclick="setScannerFilter('meal','${o.val}')">${o.label}</button>`
+  ).join('');
+
+  // ── Source filter chips ──
+  const srcOpts = [
+    { val: 'mealdb',      label: '🌍 TheMealDB' },
+    { val: 'spoonacular', label: `🥄 Spoonacular` },
+    { val: 'saved',       label: `⭐ ${lang === 'sv' ? 'Mina recept' : 'My recipes'}` },
+  ];
+  const srcChipAll = `<button class="filter-chip${!scannerSrcFilter ? ' active' : ''}" style="font-size:13px;padding:6px 12px" onclick="setScannerFilter('src',null)">${t('filter_all')}</button>`;
+  const srcChips = srcOpts.map(o =>
+    `<button class="filter-chip${scannerSrcFilter === o.val ? ' active' : ''}" style="font-size:13px;padding:6px 12px" onclick="setScannerFilter('src','${o.val}')">${o.label}</button>`
+  ).join('');
+
+  // ── Spoonacular button (disappears after fetch) ──
+  const spcBtn = workerUrl && !scannerSpcFetched
+    ? `<button id="scanner-spc-btn" onclick="triggerScannerSpoonacular()" class="btn btn-secondary" style="margin-bottom:14px;font-size:14px">🥄 ${lang === 'sv' ? 'Sök fler på Spoonacular' : 'Search Spoonacular for more'}</button>`
+    : '';
+
+  body.innerHTML = `
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('scanner_based_on')} ${escHtml(ingSummary)}</p>
+    <button onclick="setScannerState('ingredients')" class="btn btn-secondary" style="margin-bottom:12px">${t('scanner_back')}</button>
+    ${spcBtn}
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+      ${mealChipAll}${mealChips}
+    </div>
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+      ${srcChipAll}${srcChips}
+    </div>
+    <div id="scanner-results-cards"></div>`;
+
+  renderScannerResultCards();
+}
+
+function renderScannerResultCards() {
+  // Apply active filters
+  let filtered = scannerAllResults;
+  if (scannerMealFilter) filtered = filtered.filter(x => x.recipe.mealType === scannerMealFilter);
+  if (scannerSrcFilter === 'mealdb')      filtered = filtered.filter(x => x.recipe._mealdb);
+  else if (scannerSrcFilter === 'spoonacular') filtered = filtered.filter(x => x.recipe._spoonacular);
+  else if (scannerSrcFilter === 'saved')  filtered = filtered.filter(x => !x.recipe._mealdb && !x.recipe._spoonacular);
+
+  const title = document.getElementById('scanner-title');
+  if (title) title.textContent = `🍽 ${filtered.length} ${lang === 'sv' ? 'recept' : 'recipes'}`;
+
+  const container = document.getElementById('scanner-results-cards');
+  if (!container) return;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px 0;color:var(--muted)">${t('scanner_no_results')}</div>`;
     return;
   }
 
-  const cards = results.map(({ recipe: r, score, matchCount, totalCount, missing }) => {
+  container.innerHTML = filtered.slice(0, 20).map(({ recipe: r, score, matchCount, totalCount, missing }) => {
     const badgeColor = score >= 0.8 ? '#22a05a' : score >= 0.5 ? '#e6a817' : '#888';
     const missingHtml = missing.length
       ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${t('scanner_missing')} ${missing.slice(0, 3).map(i => i.name).join(', ')}${missing.length > 3 ? ` +${missing.length - 3}` : ''}</div>`
@@ -2886,21 +2973,17 @@ function renderScannerResults(results) {
     const imgHtml = r.image
       ? `<img src="${escHtml(r.image)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div style=font-size:28px>${recipeEmoji(r)}</div>'" style="width:72px;height:72px;object-fit:cover;border-radius:10px;flex-shrink:0">`
       : `<div style="width:72px;height:72px;border-radius:10px;background:${recipeGradient(r)};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px">${recipeEmoji(r)}</div>`;
+    const srcTag = r._mealdb ? 'TheMealDB' : r._spoonacular ? 'Spoonacular' : lang === 'sv' ? 'Mitt recept' : 'My recipe';
     return `<div class="scanner-result-row" onclick="openRecipe('${r.id}')">
       ${imgHtml}
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:15px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.title)}</div>
-        <span class="scanner-match-badge" style="background:${badgeColor}">${matchCount}/${totalCount} ${t('scanner_ingredients')}</span>
+        <div style="font-weight:600;font-size:15px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.title)}</div>
+        <span class="scanner-match-badge" style="background:${badgeColor}">${matchCount}/${totalCount} ${lang === 'sv' ? 'ingredienser' : 'ingredients'}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">${srcTag}</span>
         ${missingHtml}
       </div>
     </div>`;
   }).join('');
-
-  const ingSummary = scannerIngredients.slice(0, 6).join(', ') + (scannerIngredients.length > 6 ? ` +${scannerIngredients.length - 6}` : '');
-  body.innerHTML = `
-    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">${t('scanner_based_on')} ${escHtml(ingSummary)}</p>
-    <button onclick="setScannerState('ingredients')" class="btn btn-secondary" style="margin-bottom:16px">${t('scanner_back')}</button>
-    ${cards}`;
 }
 
 // ═══════════════════════════════════════════════════
