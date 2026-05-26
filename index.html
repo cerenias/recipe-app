@@ -41,8 +41,9 @@
     #filter-bar { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     #filter-bar::-webkit-scrollbar { display: none; }
     #filter-bar-diet { display: flex; gap: 8px; margin-bottom: 16px; }
-    #cooked-filter-bar { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    #cooked-filter-bar { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     #cooked-filter-bar::-webkit-scrollbar { display: none; }
+    #cooked-filter-bar-2 { display: flex; gap: 8px; margin-bottom: 16px; }
     .filter-chip { white-space: nowrap; padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-size: 14px; cursor: pointer; color: var(--text); flex-shrink: 0; font-family: inherit; }
     .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
 
@@ -261,6 +262,8 @@
     <button class="filter-chip" id="cooked-sort-chip" onclick="openCookedSort()">📅 Senaste ▾</button>
     <button class="filter-chip" data-cooked-type="cookingType" onclick="openFilter('cookingType','cooked')">Metod ▾</button>
     <button class="filter-chip" data-cooked-type="protein" onclick="openFilter('protein','cooked')">Protein ▾</button>
+  </div>
+  <div id="cooked-filter-bar-2">
     <button class="filter-chip" data-cooked-type="time" onclick="openFilter('time','cooked')">Tid ▾</button>
     <button class="filter-chip" data-cooked-type="diet" onclick="openFilter('diet','cooked')">Kost ▾</button>
     <button class="filter-chip" data-cooked-type="mealType" onclick="openFilter('mealType','cooked')">Måltid ▾</button>
@@ -1010,6 +1013,7 @@ function showView(name) {
   document.getElementById('view-' + name).classList.add('active');
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
+  localStorage.setItem('receptfinnaren_tab', name);
 
   if (name === 'browse') {
     document.getElementById('search-input').value = '';
@@ -1600,7 +1604,7 @@ function updateCookedFilterChips() {
   const allOpts = { cookingType: getCookingTypes(), protein: getProteins(), time: getTimeOptions(), diet: getDietOptions(), mealType: getMealTypeOptions() };
 
   Object.keys(defaultKeys).forEach(type => {
-    const chip = document.querySelector(`#cooked-filter-bar .filter-chip[data-cooked-type="${type}"]`);
+    const chip = document.querySelector(`#cooked-filter-bar .filter-chip[data-cooked-type="${type}"], #cooked-filter-bar-2 .filter-chip[data-cooked-type="${type}"]`);
     if (!chip) return;
     const val = cookedFilters[type];
     if (val) {
@@ -3022,6 +3026,14 @@ function setLang(l) {
 // ═══════════════════════════════════════════════════
 // Boot
 // ═══════════════════════════════════════════════════
+function restoreTab() {
+  const saved = localStorage.getItem('receptfinnaren_tab');
+  // Only restore tabs that don't require special state (not 'add')
+  if (saved && ['browse', 'favourites', 'cooked', 'shopping', 'settings'].includes(saved)) {
+    showView(saved);
+  }
+}
+
 loadData();
 applyLang();
 updateSettingsAuthSection();
@@ -3039,11 +3051,13 @@ if (workerUrl && !currentUser) {
       updateSettingsAuthSection();
       showLoginScreen();
     } else {
-      render();
+      restoreTab();
       renderShopping();
       updateSettingsAuthSection();
     }
   });
+} else {
+  restoreTab();
 }
 </script>
 </body>
