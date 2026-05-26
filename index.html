@@ -2668,6 +2668,24 @@ function renderScannerBody() {
           <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handleImageCapture(event)">
         </label>
         <p style="font-size:12px;color:var(--muted);margin-top:14px">${t('scanner_gallery')}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin:4px 0 16px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:13px;color:var(--muted)">${lang === 'sv' ? 'eller skriv ingredienser direkt' : 'or add ingredients by hand'}</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+        <input id="scanner-add-input" class="form-input" type="text"
+          placeholder="${t('scanner_add_ph')}"
+          style="flex:1;margin:0"
+          onkeydown="if(event.key==='Enter'){addScannerIngredientFromCapture();event.preventDefault()}">
+        <button onclick="addScannerIngredientFromCapture()" class="btn btn-secondary btn-sm" style="white-space:nowrap;margin:0;height:48px">
+          + ${t('scanner_add_btn')}
+        </button>
+      </div>
+      <div id="scanner-ingredient-tags" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+      <div id="scanner-capture-find" style="display:none">
+        <button onclick="runIngredientMatch()" class="btn btn-primary">${t('scanner_find')}</button>
       </div>`;
   }
 
@@ -2722,6 +2740,21 @@ function addScannerIngredient() {
   if (!scannerIngredients.includes(val)) {
     scannerIngredients.push(val);
     renderScannerIngredientTags();
+  }
+  input.value = '';
+  input.focus();
+}
+
+function addScannerIngredientFromCapture() {
+  const input = document.getElementById('scanner-add-input');
+  const val = (input?.value || '').trim().toLowerCase();
+  if (!val) return;
+  if (!scannerIngredients.includes(val)) {
+    scannerIngredients.push(val);
+    renderScannerIngredientTags();
+    // Show the "Find recipes" button once there's at least one ingredient
+    const findBtn = document.getElementById('scanner-capture-find');
+    if (findBtn) findBtn.style.display = 'block';
   }
   input.value = '';
   input.focus();
