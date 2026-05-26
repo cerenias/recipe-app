@@ -346,8 +346,7 @@
     <div class="form-group">
       <label class="form-label" data-i18n="form_mealtype">Måltid</label>
       <div class="chip-group" id="f-mealType">
-        <div class="chip" data-val="middag">🍽 Middag</div>
-        <div class="chip" data-val="lunch">🥗 Lunch</div>
+        <div class="chip" data-val="middag">🍽 Middag/Lunch</div>
         <div class="chip" data-val="frukost">🥐 Frukost</div>
         <div class="chip" data-val="efterrätt">🍰 Efterrätt</div>
         <div class="chip" data-val="drink">🥤 Drink</div>
@@ -530,7 +529,7 @@ const T = {
     filter_method:'Method', filter_protein:'Protein', filter_time:'Time', filter_prep:'Prep', filter_diet:'Diet', filter_mealtype:'Meal', filter_source:'Source',
     filter_all:'All',
     fm_cookingType:'Cooking method', fm_protein:'Protein', fm_time:'Time', fm_prepTime:'Prep time', fm_diet:'Dietary needs', fm_mealType:'Meal type', fm_source:'Recipe source',
-    meal_middag:'🍽 Dinner', meal_lunch:'🥗 Lunch', meal_frukost:'🥐 Breakfast', meal_efterratt:'🍰 Dessert', meal_drink:'🥤 Drink', meal_mellanmar:'🍎 Snack',
+    meal_middag:'🍽 Dinner/Lunch', meal_frukost:'🥐 Breakfast', meal_efterratt:'🍰 Dessert', meal_drink:'🥤 Drink', meal_mellanmar:'🍎 Snack',
     form_mealtype:'Meal type',
     source_mealdb:'🌍 TheMealDB', source_spoonacular:'🥄 Spoonacular', source_saved:'⭐ My recipes',
     time_15:'⚡ Under 15 min', time_30:'🕒 Under 30 min', time_60:'⏱ Under 1 hour', time_999:'🕰 Any time',
@@ -649,7 +648,7 @@ const T = {
     filter_method:'Metod', filter_protein:'Protein', filter_time:'Tid', filter_prep:'Förb.', filter_diet:'Kost', filter_mealtype:'Måltid', filter_source:'Källa',
     filter_all:'Alla',
     fm_cookingType:'Tillagningsmetod', fm_protein:'Protein', fm_time:'Tid', fm_prepTime:'Förberedelsetid', fm_diet:'Kostbehov', fm_mealType:'Måltidstyp', fm_source:'Receptkälla',
-    meal_middag:'🍽 Middag', meal_lunch:'🥗 Lunch', meal_frukost:'🥐 Frukost', meal_efterratt:'🍰 Efterrätt', meal_drink:'🥤 Drink', meal_mellanmar:'🍎 Mellanmål',
+    meal_middag:'🍽 Middag/Lunch', meal_frukost:'🥐 Frukost', meal_efterratt:'🍰 Efterrätt', meal_drink:'🥤 Drink', meal_mellanmar:'🍎 Mellanmål',
     form_mealtype:'Måltid',
     source_mealdb:'🌍 TheMealDB', source_spoonacular:'🥄 Spoonacular', source_saved:'⭐ Mina recept',
     time_15:'⚡ Under 15 min', time_30:'🕒 Under 30 min', time_60:'⏱ Under 1 timme', time_999:'🕰 Valfri tid',
@@ -806,7 +805,6 @@ function getDietOptions() { return [{ val:'glutenfree', label: t('diet_glutenfre
 function getMealTypeOptions() {
   return [
     { val:'middag',    label: t('meal_middag') },
-    { val:'lunch',     label: t('meal_lunch') },
     { val:'frukost',   label: t('meal_frukost') },
     { val:'efterrätt', label: t('meal_efterratt') },
     { val:'drink',     label: t('meal_drink') },
@@ -1576,7 +1574,7 @@ function renderCooked() {
   if (cookedFilters.protein)     cooked = cooked.filter(r => (r.protein     || []).includes(cookedFilters.protein));
   if (cookedFilters.time)        { const max = parseInt(cookedFilters.time); cooked = cooked.filter(r => !r.time || r.time <= max); }
   if (cookedFilters.diet === 'glutenfree') cooked = cooked.filter(r => !hasGluten(r));
-  if (cookedFilters.mealType) cooked = cooked.filter(r => r.mealType === cookedFilters.mealType);
+  if (cookedFilters.mealType) cooked = cooked.filter(r => mealTypeMatches(r.mealType, cookedFilters.mealType));
 
   // Apply sort
   switch (cookedSort) {
@@ -1666,13 +1664,19 @@ function renderFavourites() {
   grid.innerHTML = favs.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
 }
 
+// 'middag' filter value covers both middag and lunch tagged recipes
+function mealTypeMatches(recipeMealType, filterVal) {
+  if (filterVal === 'middag') return recipeMealType === 'middag' || recipeMealType === 'lunch';
+  return recipeMealType === filterVal;
+}
+
 function applyRecipeFilter(r, q) {
   if (q && !r.title.toLowerCase().includes(q)) return false;
   if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
   if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
   if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
   if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
-  if (filters.mealType && r.mealType !== filters.mealType) return false;
+  if (filters.mealType && !mealTypeMatches(r.mealType, filters.mealType)) return false;
   return true;
 }
 
@@ -2949,7 +2953,7 @@ function renderScannerResults() {
 function renderScannerResultCards() {
   // Apply active filters
   let filtered = scannerAllResults;
-  if (scannerMealFilter) filtered = filtered.filter(x => x.recipe.mealType === scannerMealFilter);
+  if (scannerMealFilter) filtered = filtered.filter(x => mealTypeMatches(x.recipe.mealType, scannerMealFilter));
   if (scannerSrcFilter === 'mealdb')      filtered = filtered.filter(x => x.recipe._mealdb);
   else if (scannerSrcFilter === 'spoonacular') filtered = filtered.filter(x => x.recipe._spoonacular);
   else if (scannerSrcFilter === 'saved')  filtered = filtered.filter(x => !x.recipe._mealdb && !x.recipe._spoonacular);
