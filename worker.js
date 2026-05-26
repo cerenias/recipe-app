@@ -4,10 +4,11 @@
 //   ?url=         Recipe URL scraper
 //   ?spc=         Spoonacular search
 //   ?spc_id=      Spoonacular instructions for one recipe
-//   ?action=      Auth + sync (register / login / load / save)
+//   ?action=      Auth + sync (register / login / load / save / identify)
 //
 // Required bindings (Cloudflare dashboard → Worker → Settings → Variables):
 //   Secret: SPOONACULAR_KEY
+//   Secret: ANTHROPIC_API_KEY   ← new: for ingredient photo scanning
 //   KV namespace: RECIPE_KV  (create in KV tab, then bind with variable name RECIPE_KV)
 
 export default {
@@ -34,6 +35,7 @@ export default {
     if (spc)       return spoonacularSearch(spc, url.searchParams, env, corsHeaders);
     if (spcId)     return spoonacularInstructions(spcId, env, corsHeaders);
     if (q)         return checkWillys(q, corsHeaders);
+    if (action === 'identify') return identifyIngredients(request, env, corsHeaders);
     if (action)    return handleAction(action, request, env, corsHeaders);
 
     return new Response(
@@ -328,6 +330,73 @@ async function scrapeRecipe(recipeUrl, corsHeaders) {
 
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { headers: corsHeaders });
+  }
+}
+
+// ── Ingredient photo scanner (Claude Haiku vision) ───────────────────────────
+async function identifyIngredients(request, env, corsHeaders) {
+  const key = env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return errRes(corsHeaders, 'ANTHROPIC_API_KEY not set — add it as a Secret in Cloudflare Worker → Settings → Variables');
+  }
+
+  let body;
+  try { body = await request.json(); } catch { return errRes(corsHeaders, 'Invalid JSON'); }
+
+  const { image, mediaType } = body || {};
+  if (!image) return errRes(corsHeaders, 'No image provided');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 512,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: image },
+            },
+            {
+              type: 'text',
+              text: 'List all food ingredients clearly visible in this image. Return ONLY a JSON array of ingredient names in English, all lowercase. Exclude spices, salt, pepper, oil, vinegar, condiments, and water. Include vegetables, fruits, meat, fish, dairy, eggs, grains, and other main food items. Example: ["chicken breast", "broccoli", "milk", "carrots", "eggs"]. Respond with only the JSON array, no other text.',
+            },
+          ],
+        }],
+      }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      return errRes(corsHeaders, `Anthropic API error ${res.status}: ${txt.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '').trim();
+
+    let ingredients = [];
+    try {
+      ingredients = JSON.parse(text);
+    } catch {
+      const m = text.match(/\[[\s\S]*?\]/);
+      if (m) { try { ingredients = JSON.parse(m[0]); } catch {} }
+    }
+
+    if (!Array.isArray(ingredients)) ingredients = [];
+    ingredients = ingredients
+      .filter(i => typeof i === 'string' && i.trim().length > 0)
+      .map(i => i.trim().toLowerCase());
+
+    return new Response(JSON.stringify({ ingredients }), { headers: corsHeaders });
+  } catch (e) {
+    return errRes(corsHeaders, e.message);
   }
 }
 
