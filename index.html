@@ -38,10 +38,10 @@
     #search-wrap::before { content: '🔍'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
 
     /* ── Filters ── */
-    #filter-bar { display: flex; gap: 8px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    #filter-bar { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     #filter-bar::-webkit-scrollbar { display: none; }
-    #filter-bar-diet { display: flex; gap: 8px; margin-bottom: 12px; }
-    #cooked-filter-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    #filter-bar-diet { display: flex; gap: 8px; margin-bottom: 16px; }
+    #cooked-filter-bar { display: flex; gap: 8px; margin-top: 10px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     #cooked-filter-bar::-webkit-scrollbar { display: none; }
     .filter-chip { white-space: nowrap; padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-size: 14px; cursor: pointer; color: var(--text); flex-shrink: 0; font-family: inherit; }
     .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
@@ -236,7 +236,6 @@
     <button class="filter-chip" data-type="cookingType" onclick="openFilter('cookingType')" data-i18n-chip="filter_method">Metod ▾</button>
     <button class="filter-chip" data-type="protein" onclick="openFilter('protein')" data-i18n-chip="filter_protein">Protein ▾</button>
     <button class="filter-chip" data-type="time" onclick="openFilter('time')" data-i18n-chip="filter_time">Tid ▾</button>
-    <button class="filter-chip" data-type="prepTime" onclick="openFilter('prepTime')" data-i18n-chip="filter_prep">Förb. ▾</button>
   </div>
   <div id="filter-bar-diet">
     <button class="filter-chip" data-type="diet" onclick="openFilter('diet')" data-i18n-chip="filter_diet">Kost ▾</button>
@@ -840,7 +839,7 @@ const KNOWN_SITES = {
 let lang          = localStorage.getItem(LANG_KEY) || 'sv';
 let recipes       = [];   // user's saved collection (localStorage)
 let shoppingList  = [];
-let filters       = { cookingType: null, protein: null, time: null, prepTime: null, diet: null, source: null, mealType: null };
+let filters       = { cookingType: null, protein: null, time: null, diet: null, source: null, mealType: null };
 let workerUrl        = localStorage.getItem('workerUrl') || '';
 let currentUser   = null; // { username, token } when logged in
 let cookedFilters = { cookingType: null, protein: null, time: null, diet: null, mealType: null };
@@ -1015,7 +1014,7 @@ function showView(name) {
   if (name === 'browse') {
     document.getElementById('search-input').value = '';
     spoonacularResults = [];
-    filters = { cookingType: null, protein: null, time: null, prepTime: null, diet: null, source: null, mealType: null };
+    filters = { cookingType: null, protein: null, time: null, diet: null, source: null, mealType: null };
     updateFilterChips();
     loadAllMealDb(); // fetch all recipes on first visit; subsequent calls are no-ops
   }
@@ -1106,7 +1105,6 @@ function openFilter(type, ctx) {
     cookingType: { labelKey: 'fm_cookingType', opts: getCookingTypes() },
     protein:     { labelKey: 'fm_protein',     opts: getProteins() },
     time:        { labelKey: 'fm_time',        opts: getTimeOptions() },
-    prepTime:    { labelKey: 'fm_prepTime',    opts: getPrepOptions() },
     diet:        { labelKey: 'fm_diet',        opts: getDietOptions() },
     mealType:    { labelKey: 'fm_mealType',    opts: getMealTypeOptions() },
     source:      { labelKey: 'fm_source',      opts: getSourceOptions() },
@@ -1173,10 +1171,10 @@ function maybeCloseFilter(e) {
 }
 
 function updateFilterChips() {
-  const defaultKeys = { cookingType: 'filter_method', protein: 'filter_protein', time: 'filter_time', prepTime: 'filter_prep', diet: 'filter_diet', mealType: 'filter_mealtype', source: 'filter_source' };
+  const defaultKeys = { cookingType: 'filter_method', protein: 'filter_protein', time: 'filter_time', diet: 'filter_diet', mealType: 'filter_mealtype', source: 'filter_source' };
   const allOpts = {
     cookingType: getCookingTypes(), protein: getProteins(),
-    time: getTimeOptions(), prepTime: getPrepOptions(), diet: getDietOptions(), mealType: getMealTypeOptions(), source: getSourceOptions(),
+    time: getTimeOptions(), diet: getDietOptions(), mealType: getMealTypeOptions(), source: getSourceOptions(),
   };
 
   Object.keys(defaultKeys).forEach(type => {
@@ -1669,7 +1667,6 @@ function applyRecipeFilter(r, q) {
   if (filters.protein     && !(r.protein     || []).includes(filters.protein))     return false;
   if (filters.cookingType && !(r.cookingType || []).includes(filters.cookingType)) return false;
   if (filters.time)    { const max = parseInt(filters.time);    if (r.time    && r.time    > max) return false; }
-  if (filters.prepTime){ const max = parseInt(filters.prepTime);if (r.prepTime && r.prepTime > max) return false; }
   if (filters.diet === 'glutenfree' && hasGluten(r)) return false;
   if (filters.mealType && r.mealType !== filters.mealType) return false;
   return true;
@@ -1679,7 +1676,7 @@ function render() {
   const grid   = document.getElementById('recipe-grid');
   const search = (document.getElementById('search-input').value || '').trim();
   const q      = search.toLowerCase();
-  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.prepTime || filters.diet || filters.source || filters.mealType);
+  const hasFilters = !!(filters.protein || filters.cookingType || filters.time || filters.diet || filters.source || filters.mealType);
   const recipeCount = lang === 'sv' ? 'recept' : 'recipes';
 
   // ── Still loading TheMealDB ──
@@ -1702,6 +1699,17 @@ function render() {
   const savedMatches = (src && src !== 'saved') ? [] : recipes.filter(r => !liveIds.has(r.id) && applyRecipeFilter(r, q));
 
   let html = '';
+
+  // ── Spoonacular opt-in button — shown first so it's always visible ──
+  if ((q || hasFilters) && workerUrl && !spoonacularResults.length && src !== 'mealdb' && src !== 'saved') {
+    html += `<div style="text-align:center;margin:4px 0 16px">
+      <button id="spc-search-btn" class="btn btn-secondary" style="width:auto;padding:12px 24px;font-size:15px" onclick="triggerSpoonacular()">
+        🥄 ${lang === 'sv' ? 'Sök på Spoonacular' : 'Search Spoonacular'}
+      </button>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">${lang === 'sv' ? 'Fler recept från Spoonacular (använder API-kvot)' : 'More recipes from Spoonacular (uses API quota)'}</p>
+    </div>`;
+  }
+
   if (spcFiltered.length) {
     html += `<div class="grid-section-label">Spoonacular — ${spcFiltered.length} ${recipeCount}</div>`;
     html += spcFiltered.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
@@ -1713,16 +1721,6 @@ function render() {
   if (savedMatches.length) {
     html += `<div class="grid-section-label">${t('grid_saved')}</div>`;
     html += savedMatches.map(r => recipeCardHtml(r, `openRecipe('${r.id}')`)).join('');
-  }
-
-  // ── Spoonacular opt-in button ──
-  if ((q || hasFilters) && workerUrl && !spoonacularResults.length && src !== 'mealdb' && src !== 'saved') {
-    html += `<div style="text-align:center;margin:20px 0 8px">
-      <button id="spc-search-btn" class="btn btn-secondary" style="width:auto;padding:12px 24px;font-size:15px" onclick="triggerSpoonacular()">
-        🥄 ${lang === 'sv' ? 'Sök på Spoonacular' : 'Search Spoonacular'}
-      </button>
-      <p style="font-size:12px;color:var(--muted);margin-top:6px">${lang === 'sv' ? 'Fler recept från Spoonacular (använder API-kvot)' : 'More recipes from Spoonacular (uses API quota)'}</p>
-    </div>`;
   }
 
   if (!html) {
