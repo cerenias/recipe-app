@@ -1050,12 +1050,10 @@ function setFilter(type, val) {
     renderCooked(); // renderCooked calls updateCookedFilterChips internally
   } else {
     filters[type] = val;
+    spoonacularResults = []; // clear old results when filter changes
     maybeCloseFilter();
     updateFilterChips();
     render();
-    const q = getSpoonacularQuery();
-    if (q) searchSpoonacularDebounced(q);
-    else   { spoonacularResults = []; render(); }
   }
 }
 
@@ -1332,18 +1330,18 @@ function getSpoonacularQuery() {
 }
 
 function onSearchInput() {
-  render(); // instant local filter on allMealDbRecipes
-  const q = getSpoonacularQuery();
-  if (q) searchSpoonacularDebounced(q);
-  else   { spoonacularResults = []; render(); }
+  spoonacularResults = []; // clear old results when search changes
+  render();
 }
 
-function searchSpoonacularDebounced(query) {
+async function triggerSpoonacular() {
+  const q = getSpoonacularQuery();
+  if (!q || !workerUrl) return;
   clearTimeout(searchDebounce);
-  searchDebounce = setTimeout(async () => {
-    spoonacularResults = await searchSpoonacular(query);
-    render();
-  }, 500);
+  const btn = document.getElementById('spc-search-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ' + (lang === 'sv' ? 'Söker…' : 'Searching…'); }
+  spoonacularResults = await searchSpoonacular(q);
+  render();
 }
 
 // ═══════════════════════════════════════════════════
