@@ -33,6 +33,7 @@ export default {
 
     if (recipeUrl) return scrapeRecipe(recipeUrl, corsHeaders);
     if (spc)       return spoonacularSearch(spc, url.searchParams, env, corsHeaders);
+    if (url.searchParams.get('spc_ing')) return spoonacularByIngredients(url.searchParams.get('spc_ing'), env, corsHeaders);
     if (spcId)     return spoonacularInstructions(spcId, env, corsHeaders);
     if (q)         return checkWillys(q, corsHeaders);
     if (action === 'identify') return identifyIngredients(request, env, corsHeaders);
@@ -144,6 +145,30 @@ function generateToken() {
   const arr = new Uint8Array(32);
   crypto.getRandomValues(arr);
   return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── Spoonacular: find recipes by ingredients ──────────────────────────────────
+async function spoonacularByIngredients(ingredients, env, corsHeaders) {
+  const key = env.SPOONACULAR_KEY;
+  if (!key) return errRes(corsHeaders, 'SPOONACULAR_KEY not set');
+  try {
+    const params = new URLSearchParams({
+      ingredients,      // comma-separated ingredient list
+      number: '16',
+      ranking: '2',     // maximise used ingredients
+      ignorePantry: 'true',
+      apiKey: key,
+    });
+    const res = await fetch(
+      `https://api.spoonacular.com/recipes/findByIngredients?${params}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    if (!res.ok) return errRes(corsHeaders, `Spoonacular returned ${res.status}`);
+    const data = await res.text();
+    return new Response(data, { headers: corsHeaders });
+  } catch (e) {
+    return errRes(corsHeaders, e.message);
+  }
 }
 
 // ── Spoonacular search ────────────────────────────────────────────────────────

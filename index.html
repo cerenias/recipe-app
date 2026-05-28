@@ -2876,27 +2876,63 @@ function runIngredientMatch() {
   renderScannerResults();
 }
 
+// Map a findByIngredients result item to the internal recipe format
+function spoonacularIngToRecipe(item) {
+  const allIngs = [
+    ...(item.usedIngredients   || []),
+    ...(item.missedIngredients || []),
+  ].map(i => {
+    const { amount, unit } = convertMeasure(`${i.amount || ''} ${i.unit || ''}`);
+    return { name: i.nameClean || i.name || '', amount, unit };
+  });
+  return {
+    id:           'spc_' + item.id,
+    title:        item.title  || '',
+    image:        item.image  || null,
+    ingredients:  allIngs,
+    instructions: [],
+    cookingType:  [],
+    protein:      [],
+    mealType:     'middag',
+    _spoonacular: true,
+  };
+}
+
 async function triggerScannerSpoonacular() {
   if (!workerUrl || !scannerIngredients.length) return;
   const btn = document.getElementById('scanner-spc-btn');
   if (btn) { btn.disabled = true; btn.textContent = `⏳ ${lang === 'sv' ? 'Söker…' : 'Searching…'}`; }
 
-  // Use first 2-3 detected ingredients as the search query
-  const q = scannerIngredients.slice(0, 3).join(' ');
-  const spcNew = await searchSpoonacular(q);
-  scannerSpcFetched = true;
+  try {
+    // Use Spoonacular's findByIngredients endpoint — searches by actual ingredients
+    const ingsQuery = scannerIngredients.join(',');
+    const res = await fetch(`${workerUrl}?spc_ing=${encodeURIComponent(ingsQuery)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
 
-  // Score and merge new results, skip already-in-pool IDs
-  const existingIds = new Set(scannerAllResults.map(x => x.recipe.id));
-  for (const r of spcNew) {
-    if (!existingIds.has(r.id)) {
-      const scored = scoreRecipeMatch(r, scannerIngredients);
-      if (scored) scannerAllResults.push(scored);
+    const spcNew = Array.isArray(data) ? data.map(spoonacularIngToRecipe) : [];
+
+    // Also register in global spoonacularResults so openRecipe() can find them
+    for (const r of spcNew) {
+      if (!spoonacularResults.find(x => x.id === r.id)) spoonacularResults.push(r);
     }
-  }
-  scannerAllResults.sort((a, b) => b.score - a.score);
 
-  renderScannerResults(); // rebuild shell (removes Spoonacular button, updates chips)
+    // Score and merge into scanner pool, skip duplicates
+    const existingIds = new Set(scannerAllResults.map(x => x.recipe.id));
+    for (const r of spcNew) {
+      if (!existingIds.has(r.id)) {
+        const scored = scoreRecipeMatch(r, scannerIngredients);
+        if (scored) scannerAllResults.push(scored);
+      }
+    }
+    scannerAllResults.sort((a, b) => b.score - a.score);
+  } catch (e) {
+    showToast(`⚠️ Spoonacular: ${e.message}`);
+  }
+
+  scannerSpcFetched = true;
+  renderScannerResults(); // rebuild shell (hides the button, updates filter chips)
 }
 
 function setScannerFilter(type, val) {
