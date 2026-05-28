@@ -1636,6 +1636,19 @@ function markAsCooked(id) {
   openRecipe(id); // re-render panel with rating section visible
 }
 
+function removeFromCooked(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  r.cooked   = false;
+  r.cookedAt = null;
+  r.rating   = null;
+  r.comment  = '';
+  saveData();
+  closePanel();
+  renderCooked();
+  showToast(lang === 'sv' ? 'Borttagen från Lagade' : 'Removed from Cooked');
+}
+
 function saveRatingComment(id) {
   const r = recipes.find(x => x.id === id);
   if (!r) return;
@@ -1823,6 +1836,7 @@ function openRecipe(id) {
     </div>
     <textarea id="cooked-comment" class="form-input" rows="3" placeholder="${t('panel_comment_ph')}" style="resize:vertical">${escHtml(r.comment || '')}</textarea>
     <button class="btn btn-primary" style="margin-top:10px" onclick="saveRatingComment('${r.id}')">${t('panel_save_rating')}</button>
+    <button class="btn btn-secondary btn-danger" style="margin-top:6px" onclick="removeFromCooked('${r.id}')">${lang === 'sv' ? '🗑 Ta bort från Lagade' : '🗑 Remove from Cooked'}</button>
   </div>` : ''}`;
 
   const fav = isFavourite(r.id) || (!isSaved && false);
