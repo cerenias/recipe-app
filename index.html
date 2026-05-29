@@ -538,7 +538,8 @@ const T = {
     cat_produce:'🥦 Produce', cat_dairy:'🥛 Dairy & Eggs', cat_meat:'🥩 Meat & Fish',
     cat_pantry:'🫙 Pantry', cat_frozen:'❄️ Frozen', cat_other:'📦 Other',
     panel_ingredients:'Ingredients', panel_servings:'servings', panel_instructions:'Instructions',
-    panel_save:'💾 Save to my recipes', panel_open:'Open original recipe ↗', panel_edit:'✏️ Edit',
+    panel_save:'💾 Save to my recipes', panel_open:'Open original recipe ↗', panel_edit:'✏️ Edit', panel_share:'↗ Share recipe',
+    share_copied:'🔗 Link copied!', share_received:'Friend shared a recipe with you:',
     panel_add_all:'🛒 Add all to shopping list', panel_all_added:'✓ All on list',
     panel_add_one:'+ List', panel_added:'✓ Added',
     panel_prep:'min prep', panel_total:'total', panel_unsaved:'＋ Save',
@@ -657,7 +658,8 @@ const T = {
     cat_produce:'🥦 Grönsaker & frukt', cat_dairy:'🥛 Mejeri & ägg', cat_meat:'🥩 Kött & fisk',
     cat_pantry:'🫙 Skafferi', cat_frozen:'❄️ Frysvaror', cat_other:'📦 Övrigt',
     panel_ingredients:'Ingredienser', panel_servings:'portioner', panel_instructions:'Instruktioner',
-    panel_save:'💾 Spara recept', panel_open:'Öppna originalrecept ↗', panel_edit:'✏️ Redigera',
+    panel_save:'💾 Spara recept', panel_open:'Öppna originalrecept ↗', panel_edit:'✏️ Redigera', panel_share:'↗ Dela recept',
+    share_copied:'🔗 Länk kopierad!', share_received:'En vän delade ett recept med dig:',
     panel_add_all:'🛒 Lägg allt i inköpslistan', panel_all_added:'✓ Allt på listan',
     panel_add_one:'+ Lista', panel_added:'✓ Tillagd',
     panel_prep:'min förb.', panel_total:'totalt', panel_unsaved:'＋ Spara',
@@ -850,8 +852,9 @@ try { const a = localStorage.getItem(AUTH_KEY); if (a) currentUser = JSON.parse(
 let allMealDbRecipes  = [];   // all ~315 TheMealDB recipes, loaded once on first browse
 let mealDbLoading    = false; // true while fetching all 26 letters
 let mealDbAllLoaded  = false; // true once fully loaded (persists across tab switches)
-let spoonacularResults = []; // live Spoonacular results for current typed search
-let searchDebounce  = null;
+let spoonacularResults  = []; // live Spoonacular results for current typed search
+let searchDebounce      = null;
+let pendingSharedRecipe = null; // decoded recipe from a share link, waiting for user to save
 
 // ═══════════════════════════════════════════════════
 // Persistence
@@ -1774,9 +1777,11 @@ function openRecipe(id) {
   let r = recipes.find(x => x.id === id);
   if (!r) r = allMealDbRecipes.find(x => x.id === id);
   if (!r) r = spoonacularResults.find(x => x.id === id);
+  if (!r && pendingSharedRecipe && pendingSharedRecipe.id === id) r = pendingSharedRecipe;
   if (!r) return;
 
-  const isSaved = !r._mealdb && !r._spoonacular;
+  const isSharedPreview = id === '_shared_preview';
+  const isSaved = !r._mealdb && !r._spoonacular && !isSharedPreview;
 
   const cts = getCookingTypes();
   const pts = getProteins();
@@ -1824,10 +1829,12 @@ function openRecipe(id) {
     <div id="spc-instructions-loading" style="color:var(--muted);font-size:14px;padding:10px 0">⏳ ${lang === 'sv' ? 'Hämtar instruktioner…' : 'Fetching instructions…'}</div>` : '');
 
   const actionsHtml = `<div style="margin-top:18px">
-    ${!isSaved ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">${t('panel_save')}</button>` : ''}
+    ${isSharedPreview ? `<button class="btn btn-primary" onclick="saveSharedRecipe()">${t('panel_save')}</button>` : ''}
+    ${!isSaved && !isSharedPreview ? `<button class="btn btn-primary" onclick="saveMealDbRecipe('${r.id}')">${t('panel_save')}</button>` : ''}
     ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="btn ${isSaved ? 'btn-primary' : 'btn-secondary'}">${t('panel_open')}</a>` : ''}
     ${isSaved ? `<button class="btn btn-secondary" onclick="closePanel();showAddForm(recipes.find(x=>x.id==='${r.id}'))">${t('panel_edit')}</button>` : ''}
-    <button class="btn ${r.cooked ? 'btn-secondary' : 'btn-secondary'}" onclick="markAsCooked('${r.id}')">${r.cooked ? t('panel_already_cooked') : t('panel_mark_cooked')}</button>
+    ${!isSharedPreview ? `<button class="btn btn-secondary" onclick="markAsCooked('${r.id}')">${r.cooked ? t('panel_already_cooked') : t('panel_mark_cooked')}</button>` : ''}
+    <button class="btn btn-secondary" onclick="shareRecipe('${r.id}')">${t('panel_share')}</button>
   </div>
   ${r.cooked ? `<div class="cooked-section">
     <div class="section-title">${t('panel_your_rating')}</div>
@@ -3041,6 +3048,81 @@ function renderScannerResultCards() {
 }
 
 // ═══════════════════════════════════════════════════
+// Share recipe
+// ═══════════════════════════════════════════════════
+
+function shareRecipe(id) {
+  let r = recipes.find(x => x.id === id);
+  if (!r) r = allMealDbRecipes.find(x => x.id === id);
+  if (!r) r = spoonacularResults.find(x => x.id === id);
+  if (!r) return;
+
+  // Minimal payload — strip app-internal state
+  const payload = {
+    title:        r.title,
+    image:        r.image        || null,
+    ingredients:  r.ingredients  || [],
+    instructions: r.instructions || [],
+    time:         r.time         || null,
+    servings:     r.servings     || null,
+    cookingType:  r.cookingType  || [],
+    protein:      r.protein      || [],
+    mealType:     r.mealType     || null,
+    site:         r.site         || null,
+    url:          r.url          || null,
+  };
+
+  // Encode as Base64 URL fragment
+  const b64      = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const shareUrl = `${location.origin}${location.pathname}#share=${b64}`;
+
+  // Readable text for the message body
+  const ingsText  = payload.ingredients.map(i => `• ${[i.amount, i.unit, i.name].filter(Boolean).join(' ')}`).join('\n');
+  const stepsText = payload.instructions.map((s, i) => `${i + 1}. ${s}`).join('\n');
+  const body = [
+    `🍽 ${payload.title}`,
+    '',
+    lang === 'sv' ? 'Ingredienser:' : 'Ingredients:',
+    ingsText,
+    stepsText ? `\n${lang === 'sv' ? 'Instruktioner:' : 'Instructions:'}\n${stepsText}` : '',
+  ].filter(Boolean).join('\n');
+
+  if (navigator.share) {
+    navigator.share({ title: payload.title, text: body, url: shareUrl }).catch(() => {});
+  } else {
+    // Desktop fallback — copy link to clipboard
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => showToast(t('share_copied')))
+      .catch(() => showToast(t('share_copied')));
+  }
+}
+
+function saveSharedRecipe() {
+  if (!pendingSharedRecipe) return;
+  const saved = { ...pendingSharedRecipe, id: uid(), favourite: false };
+  delete saved._shared;
+  recipes.unshift(saved);
+  pendingSharedRecipe = null;
+  saveData();
+  closePanel();
+  showToast(t('toast_saved'));
+  render();
+}
+
+function checkShareLink() {
+  if (!location.hash.startsWith('#share=')) return;
+  try {
+    const b64  = location.hash.slice(7);
+    const data = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    if (!data.title) throw new Error('missing title');
+    pendingSharedRecipe = { ...data, id: '_shared_preview', _shared: true };
+  } catch {
+    // Malformed link — ignore silently
+  }
+  history.replaceState(null, '', location.pathname);
+}
+
+// ═══════════════════════════════════════════════════
 // Utils
 // ═══════════════════════════════════════════════════
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -3171,6 +3253,7 @@ function restoreTab() {
   }
 }
 
+checkShareLink();
 loadData();
 applyLang();
 updateSettingsAuthSection();
@@ -3195,6 +3278,11 @@ if (workerUrl && !currentUser) {
   });
 } else {
   restoreTab();
+}
+
+// If a shared recipe was in the URL, open it after boot
+if (pendingSharedRecipe) {
+  setTimeout(() => openRecipe('_shared_preview'), 400);
 }
 </script>
 </body>
