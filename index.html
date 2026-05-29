@@ -2409,21 +2409,32 @@ const INGREDIENT_SV = {
 };
 
 // Translate a single ingredient name to Swedish (display only — stored value stays English)
+// Reverse map: Swedish → English (longest English key wins per Swedish value)
+const INGREDIENT_EN = {};
+for (const [en, sv] of Object.entries(INGREDIENT_SV)) {
+  if (!INGREDIENT_EN[sv] || en.length > INGREDIENT_EN[sv].length) INGREDIENT_EN[sv] = en;
+}
+
 function translateIngredient(name) {
-  if (lang !== 'sv') return name;
   const lower = (name || '').toLowerCase().trim();
-  // 1. Exact match
-  if (INGREDIENT_SV[lower]) return INGREDIENT_SV[lower];
-  // 2. Longest dictionary key that is a substring of the ingredient name
-  let best = null, bestLen = 0;
-  for (const [key, val] of Object.entries(INGREDIENT_SV)) {
-    if (lower.includes(key) && key.length > bestLen) {
-      best = val; bestLen = key.length;
+
+  if (lang === 'sv') {
+    // English → Swedish
+    if (INGREDIENT_SV[lower]) return INGREDIENT_SV[lower];
+    let best = null, bestLen = 0;
+    for (const [key, val] of Object.entries(INGREDIENT_SV)) {
+      if (lower.includes(key) && key.length > bestLen) { best = val; bestLen = key.length; }
     }
+    return best || name;
+  } else {
+    // Swedish → English (for user-saved recipes with Swedish ingredient names)
+    if (INGREDIENT_EN[lower]) return INGREDIENT_EN[lower];
+    let best = null, bestLen = 0;
+    for (const [sv, en] of Object.entries(INGREDIENT_EN)) {
+      if (lower.includes(sv) && sv.length > bestLen) { best = en; bestLen = sv.length; }
+    }
+    return best || name;
   }
-  if (best) return best;
-  // 3. No match — return original
-  return name;
 }
 
 // ═══════════════════════════════════════════════════
