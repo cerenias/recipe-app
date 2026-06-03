@@ -2970,7 +2970,7 @@ async function triggerScannerSpoonacular() {
 function setScannerFilter(type, val) {
   if (type === 'meal') scannerMealFilter = val;
   if (type === 'src')  scannerSrcFilter  = val;
-  renderScannerResultCards(); // just update cards + title, keep shell
+  renderScannerResults(); // rebuild shell so filter chips reflect new active state
 }
 
 function renderScannerResults() {
