@@ -449,8 +449,10 @@
       inputmode="numeric" autocomplete="current-password"
       data-i18n-placeholder="login_pin_ph" placeholder="PIN-kod (minst 4 tecken)"
       onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()" data-i18n="login_btn">Logga in</button>
-    <button class="btn btn-secondary" style="width:100%" onclick="doRegister()" data-i18n="register_btn">Skapa konto</button>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1" onclick="doLogin()" data-i18n="login_btn">Logga in</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="doRegister()" data-i18n="register_btn">Skapa konto</button>
+    </div>
     <button class="btn-link" onclick="skipLogin()" data-i18n="login_skip">Fortsätt utan konto →</button>
   </div>
 </div>
