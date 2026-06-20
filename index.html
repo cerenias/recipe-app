@@ -313,6 +313,11 @@
     </div>
 
     <div class="form-group">
+      <button type="button" id="scan-recipe-btn" onclick="document.getElementById('scan-recipe-input').click()" style="width:100%;padding:12px;border-radius:10px;border:1.5px dashed var(--accent);background:none;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit" data-i18n="scan_recipe_btn">📷 Scanna bild</button>
+      <div id="scan-recipe-status" style="font-size:12px;margin-top:6px;min-height:16px"></div>
+    </div>
+
+    <div class="form-group">
       <label class="form-label" data-i18n="form_image">Bild-URL (valfritt)</label>
       <input class="form-input" type="url" id="f-image" placeholder="https://...jpg">
     </div>
@@ -426,6 +431,7 @@
     <div class="settings-card-title" data-i18n="settings_import_title">Importera recept</div>
     <div class="settings-card-desc" data-i18n="settings_import_desc">Ladda in en tidigare exporterad JSON-fil.</div>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importRecipes(event)">
+    <input type="file" id="scan-recipe-input" accept="image/*" style="display:none" onchange="scanRecipeFromPhoto(event)">
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" data-i18n="settings_import_btn">⬆ Importera JSON</button>
   </div>
 
@@ -575,6 +581,10 @@ const T = {
     form_save:'Save recipe', form_update:'Update recipe', form_cancel:'Cancel',
     form_delete:'🗑 Remove from my recipes',
     form_ing_ph:'Ingredient', form_amount_ph:'Amount', form_unit_ph:'Unit',
+    scan_recipe_btn:'📷 Scan photo', scan_recipe_scanning:'⏳ Scanning…',
+    scan_recipe_ok:'✅ Done! Review and adjust, then save.',
+    scan_recipe_no_recipe:'⚠️ No recipe found in the photo.',
+    scan_recipe_error:'⚠️ Something went wrong. Check the Worker URL in Settings.',
     fetch_btn:'Fetch ▶', fetch_fetching:'⏳ Fetching…',
     fetch_status:'Fetching recipe data from the page…',
     fetch_ok:'✅ Fetched! Review, pick a cooking method, then Save.',
@@ -695,6 +705,10 @@ const T = {
     form_save:'Spara recept', form_update:'Uppdatera recept', form_cancel:'Avbryt',
     form_delete:'🗑 Ta bort från mina recept',
     form_ing_ph:'Ingrediens', form_amount_ph:'Mängd', form_unit_ph:'Enhet',
+    scan_recipe_btn:'📷 Scanna bild', scan_recipe_scanning:'⏳ Skannar…',
+    scan_recipe_ok:'✅ Klart! Granska och justera, spara sedan.',
+    scan_recipe_no_recipe:'⚠️ Hittade inget recept i bilden.',
+    scan_recipe_error:'⚠️ Något gick fel. Kontrollera Worker-URL i Inställningar.',
     fetch_btn:'Hämta ▶', fetch_fetching:'⏳ Hämtar…',
     fetch_status:'Hämtar receptdata från sidan…',
     fetch_ok:'✅ Hämtat! Granska, välj tillagningsmetod och spara.',
@@ -2215,6 +2229,71 @@ async function fetchRecipeFromUrl() {
     statusEl.style.color = 'var(--danger)';
   } finally {
     btn.textContent = t('fetch_btn');
+    btn.disabled    = false;
+  }
+}
+
+async function scanRecipeFromPhoto(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+
+  const statusEl = document.getElementById('scan-recipe-status');
+  const btn      = document.getElementById('scan-recipe-btn');
+
+  if (!workerUrl) {
+    statusEl.textContent = t('scan_recipe_error');
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+
+  btn.textContent      = t('scan_recipe_scanning');
+  btn.disabled         = true;
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = '';
+
+  try {
+    const base64    = await resizeImageToBase64(file, 1200);
+    const mediaType = file.type || 'image/jpeg';
+
+    const res  = await fetch(`${workerUrl}?action=scan_recipe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mediaType }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      statusEl.textContent = data.error === 'No recipe found'
+        ? t('scan_recipe_no_recipe')
+        : '⚠️ ' + data.error;
+      statusEl.style.color = 'var(--danger)';
+      return;
+    }
+
+    if (data.title)   document.getElementById('f-title').value    = data.title;
+    if (data.prep)    document.getElementById('f-prep').value     = data.prep;
+    if (data.time)    document.getElementById('f-time').value     = data.time;
+    if (data.servings) document.getElementById('f-servings').value = data.servings;
+    if (data.instructions?.length)
+      document.getElementById('f-instructions').value = data.instructions.join('\n');
+    if (data.ingredients?.length) {
+      const converted = data.ingredients.map(ing => {
+        const measureStr = `${ing.amount || ''} ${ing.unit || ''}`.trim();
+        if (!measureStr) return ing;
+        const c = convertMeasure(measureStr);
+        return { name: ing.name, amount: c.amount, unit: c.unit };
+      });
+      renderIngredientEditor(converted);
+    }
+
+    statusEl.textContent = t('scan_recipe_ok');
+    statusEl.style.color = 'var(--accent)';
+  } catch {
+    statusEl.textContent = t('scan_recipe_error');
+    statusEl.style.color = 'var(--danger)';
+  } finally {
+    btn.textContent = t('scan_recipe_btn');
     btn.disabled    = false;
   }
 }

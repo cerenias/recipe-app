@@ -36,7 +36,8 @@ export default {
     if (url.searchParams.get('spc_ing')) return spoonacularByIngredients(url.searchParams.get('spc_ing'), env, corsHeaders);
     if (spcId)     return spoonacularInstructions(spcId, env, corsHeaders);
     if (q)         return checkWillys(q, corsHeaders);
-    if (action === 'identify') return identifyIngredients(request, env, corsHeaders);
+    if (action === 'identify')     return identifyIngredients(request, env, corsHeaders);
+    if (action === 'scan_recipe')  return scanRecipeFromImage(request, env, corsHeaders);
     if (action)    return handleAction(action, request, env, corsHeaders);
 
     return new Response(
@@ -420,6 +421,84 @@ async function identifyIngredients(request, env, corsHeaders) {
       .map(i => i.trim().toLowerCase());
 
     return new Response(JSON.stringify({ ingredients }), { headers: corsHeaders });
+  } catch (e) {
+    return errRes(corsHeaders, e.message);
+  }
+}
+
+// ── Scan a recipe photo → structured recipe data ─────────────────────────────
+async function scanRecipeFromImage(request, env, corsHeaders) {
+  const key = env.ANTHROPIC_API_KEY;
+  if (!key) return errRes(corsHeaders, 'ANTHROPIC_API_KEY not set');
+
+  let body;
+  try { body = await request.json(); } catch { return errRes(corsHeaders, 'Invalid JSON'); }
+
+  const { image, mediaType } = body || {};
+  if (!image) return errRes(corsHeaders, 'No image provided');
+
+  const prompt = `You are extracting a recipe from a photo (e.g. a screenshot from Instagram, a cookbook page, or a handwritten recipe card).
+
+Return ONLY a valid JSON object with these fields (omit fields you cannot determine):
+{
+  "title": "Recipe name",
+  "ingredients": [
+    { "name": "ingredient name in English", "amount": "150", "unit": "g" }
+  ],
+  "instructions": ["Step 1 text", "Step 2 text"],
+  "servings": 4,
+  "time": 30,
+  "prep": 10
+}
+
+Rules:
+- "time" and "prep" are integers in minutes
+- "amount" is always a string (the number only, e.g. "2", "0.5")
+- "unit" is the unit only (e.g. "g", "dl", "st", "tsp") — use metric units
+- If amount/unit cannot be determined, use empty strings ""
+- Ingredient names in English, lowercase
+- Instructions as separate steps (one sentence or clear step per array item)
+- If the image does not contain a recipe, return { "error": "No recipe found" }
+- Return ONLY the JSON, no explanation`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: image } },
+            { type: 'text', text: prompt },
+          ],
+        }],
+      }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      return errRes(corsHeaders, `Anthropic error ${res.status}: ${txt.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '').trim();
+
+    let recipe = {};
+    try {
+      recipe = JSON.parse(text);
+    } catch {
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) { try { recipe = JSON.parse(m[0]); } catch {} }
+    }
+
+    return new Response(JSON.stringify(recipe), { headers: corsHeaders });
   } catch (e) {
     return errRes(corsHeaders, e.message);
   }
