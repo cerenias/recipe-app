@@ -538,7 +538,7 @@ const T = {
     prep_5:'⚡ Max 5 min prep', prep_10:'🕒 Max 10 min prep', prep_15:'⏱ Max 15 min prep', prep_999:'🕰 Any',
     diet_glutenfree:'🌾 Gluten-free',
     cat_produce:'🥦 Produce', cat_dairy:'🥛 Dairy & Eggs', cat_meat:'🥩 Meat & Fish',
-    cat_pantry:'🫙 Pantry', cat_frozen:'❄️ Frozen', cat_other:'📦 Other',
+    cat_pantry:'🫙 Pantry', cat_frozen:'❄️ Frozen', cat_nonfood:'🧴 Non-food', cat_other:'📦 Other',
     panel_ingredients:'Ingredients', panel_servings:'servings', panel_instructions:'Instructions',
     panel_save:'💾 Save to my recipes', panel_open:'Open original recipe ↗', panel_edit:'✏️ Edit', panel_share:'↗ Share recipe',
     share_copied:'🔗 Link copied!', share_received:'Friend shared a recipe with you:',
@@ -658,7 +658,7 @@ const T = {
     prep_5:'⚡ Max 5 min', prep_10:'🕒 Max 10 min', prep_15:'⏱ Max 15 min', prep_999:'🕰 Valfritt',
     diet_glutenfree:'🌾 Glutenfritt',
     cat_produce:'🥦 Grönsaker & frukt', cat_dairy:'🥛 Mejeri & ägg', cat_meat:'🥩 Kött & fisk',
-    cat_pantry:'🫙 Skafferi', cat_frozen:'❄️ Frysvaror', cat_other:'📦 Övrigt',
+    cat_pantry:'🫙 Skafferi', cat_frozen:'❄️ Frysvaror', cat_nonfood:'🧴 Ej mat', cat_other:'📦 Övrigt',
     panel_ingredients:'Ingredienser', panel_servings:'portioner', panel_instructions:'Instruktioner',
     panel_save:'💾 Spara recept', panel_open:'Öppna originalrecept ↗', panel_edit:'✏️ Redigera', panel_share:'↗ Dela recept',
     share_copied:'🔗 Länk kopierad!', share_received:'En vän delade ett recept med dig:',
@@ -824,9 +824,10 @@ function getSourceOptions() {
 }
 function getShoppingCategories() {
   return [
-    { key:'produce', label: t('cat_produce') }, { key:'dairy', label: t('cat_dairy') },
-    { key:'meat',    label: t('cat_meat') },    { key:'pantry', label: t('cat_pantry') },
-    { key:'frozen',  label: t('cat_frozen') },  { key:'other', label: t('cat_other') },
+    { key:'produce', label: t('cat_produce') }, { key:'dairy',   label: t('cat_dairy') },
+    { key:'meat',    label: t('cat_meat') },    { key:'pantry',  label: t('cat_pantry') },
+    { key:'frozen',  label: t('cat_frozen') },  { key:'nonfood', label: t('cat_nonfood') },
+    { key:'other',   label: t('cat_other') },
   ];
 }
 
@@ -1961,8 +1962,23 @@ function addAllIngredients(recipeId) {
 
 function copyShoppingList() {
   const unchecked = shoppingList.filter(s => !s.checked);
-  const lines = unchecked.map(item => translateIngredient(item.name));
-  const text = lines.join('\n');
+  const cats = getShoppingCategories();
+  const grouped = {};
+  cats.forEach(c => { grouped[c.key] = []; });
+  unchecked.forEach(item => { grouped[classifyIngredient(item.name)].push(item); });
+  const lines = [];
+  cats.forEach(cat => {
+    const items = grouped[cat.key];
+    if (!items || items.length === 0) return;
+    lines.push(cat.label);
+    items.forEach(item => {
+      const name = translateIngredient(item.name);
+      const amt  = [item.amount, item.unit].filter(Boolean).join(' ');
+      lines.push(amt ? `  ${name} ${amt}` : `  ${name}`);
+    });
+    lines.push('');
+  });
+  const text = lines.join('\n').trimEnd();
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('copy-list-btn');
     if (btn) {
@@ -2048,6 +2064,9 @@ function classifyIngredient(name) {
 
   // Pantry — spices, oils, canned goods, dry goods, condiments, baking
   if (/\b(flour|sugar|salt|pepper|oil|vinegar|pasta|rice|noodle|breadcrumb|oat|lentil|chickpea|kidney bean|black bean|cannellini|tomato paste|tomato sauce|passata|canned|tinned|stock|broth|bouillon|soy sauce|worcestershire|ketchup|mustard|mayo|mayonnaise|honey|syrup|jam|peanut butter|tahini|miso|oyster sauce|fish sauce|hoisin|teriyaki|balsamic|olive oil|vegetable oil|sunflower oil|coconut oil|sesame oil|rapeseed|canola oil|baking powder|baking soda|bicarbonate|yeast|cornstarch|cornflour|cocoa|chocolate|vanilla|cinnamon|cumin|turmeric|paprika|oregano|bay leaf|star anise|cardamom|clove|nutmeg|allspice|curry|chilli powder|cayenne|saffron|fennel seed|sesame seed|almond|walnut|pecan|cashew|pistachio|pine nut|hazelnut|peanut|raisin|sultana|coconut milk|coconut cream|tofu|tempeh|gelatin|bread|wrap|tortilla|cracker|seasoning|sauce|dressing|pickle|caper|olive|harissa|garam masala|mixed spice|mjöl|vetemjöl|socker|strösocker|farinsocker|florsocker|salt|peppar|svartpeppar|vitpeppar|olja|olivolja|rapsolja|solrosolja|kokosolja|sesamolja|ättika|ättikssprit|pasta|spaghetti|tagliatelle|penne|fusilli|lasagne|ris|basmati|jasminris|nudlar|risnudlar|glasnudlar|ströbröd|panko|havre|havregryn|linser|röda linser|gröna linser|kikärtor|kidneybönor|svarta bönor|cannellinibönor|tomatpuré|krossade tomater|hela tomater|passerade tomater|konserverade|buljong|hönsbuljong|kycklingbuljong|köttbuljong|grönsaksbuljong|buljongtärning|sojasås|worcestershiresås|tabasco|sriracha|ketchup|senap|dijonsenap|grovsenap|majonnäs|honung|sirap|lönnsirap|sylt|marmelad|jordnötssmör|tahini|miso|ostronsås|fisksås|balsamvinäger|bakpulver|bikarbonat|jäst|maizena|kakao|choklad|mörk choklad|vanilj|vaniljsocker|vaniljextrakt|kanel|spiskummin|gurkmeja|rökt paprika|paprikapulver|oregano|lagerblad|stjärnanis|kardemumma|kryddnejlika|muskot|currymix|currypulver|chilipulver|cayenne|saffran|fänkålsfrö|sesamfrö|mandel|valnöt|cashewnöt|pistage|pinjenötter|hasselnöt|jordnöt|russin|sultanrussin|kokosmjölk|kokosgrädde|tofu|tempeh|gelatin|bröd|knäckebröd|tortilla|kex|frukostflingor|krydda|sås|dressing|inlagd|kapris|oliver|soltor|ras el hanout|za.atar|garam masala|fem kryddor|kryddblandning|torkad timjan|torkad rosmarin|torkad oregano|torkad basilika|torkad persilja|torkad dill|torkad mynta|torkad koriander|lök pulver|vitlökspulver|lökpulver|vitlöksgranulat|rökt|inkokt)/.test(n)) return 'pantry';
+
+  // Non-food — household, hygiene, pet supplies
+  if (/\b(toilet paper|toilet roll|tissues|kitchen roll|paper towel|bin bag|trash bag|garbage bag|washing up liquid|dish soap|dishwasher tablet|laundry|detergent|fabric softener|bleach|disinfectant|cleaning spray|all.purpose cleaner|bathroom cleaner|toilet cleaner|floor cleaner|mop|sponge|scrubber|rubber gloves|cling film|cling wrap|aluminium foil|baking parchment|parchment paper|zip.lock|freezer bag|sandwich bag|shampoo|conditioner|body wash|shower gel|soap|hand soap|toothpaste|toothbrush|floss|mouthwash|deodorant|razor|shaving|moisturiser|moisturizer|sunscreen|cotton pad|cotton bud|sanitary pad|tampon|nappy|diaper|wet wipe|baby wipe|toilet roll|paper|cat food|dog food|pet food|cat litter|dog treat|bird seed|fish food|kattvmat|kattmat|hundmat|djurmat|kattgrus|hundbur|hundhalsband|toalettpapper|hushållspapper|pappershandduk|soppåse|sopppåse|soppåsar|diskmedel|diskmaskinspulver|diskmaskinskapslar|tvättmedel|sköljmedel|blekmedel|desinfektionsmedel|rengöringsspray|allrengöring|badrumsrengöring|toalettrengöring|golvrent|svamp|skursvamp|gummihandskar|plastfilm|aluminiumfolie|bakplåtspapper|fryspåse|plastpåse|schampo|balsam|duschkräm|duschtvål|tvål|handtvål|tandkräm|tandborste|tandstickor|tandtråd|munskölj|deodorant|rakhyvel|rakgel|handkräm|solskydd|bomullsrondell|bomullspinnar|dambindning|tampong|blöja|våtservett|diskborste|toalettborste|handduk|badhandduk)/.test(n)) return 'nonfood';
 
   return 'other';
 }
