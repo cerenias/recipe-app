@@ -431,7 +431,7 @@
     <div class="settings-card-title" data-i18n="settings_import_title">Importera recept</div>
     <div class="settings-card-desc" data-i18n="settings_import_desc">Ladda in en tidigare exporterad JSON-fil.</div>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importRecipes(event)">
-    <input type="file" id="scan-recipe-input" accept="image/*" style="display:none" onchange="scanRecipeFromPhoto(event)">
+    <input type="file" id="scan-recipe-input" accept="image/*" multiple style="display:none" onchange="scanRecipeFromPhoto(event)">
     <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()" data-i18n="settings_import_btn">⬆ Importera JSON</button>
   </div>
 
@@ -2234,9 +2234,9 @@ async function fetchRecipeFromUrl() {
 }
 
 async function scanRecipeFromPhoto(event) {
-  const file = event.target.files?.[0];
+  const files = Array.from(event.target.files || []);
   event.target.value = '';
-  if (!file) return;
+  if (!files.length) return;
 
   const statusEl = document.getElementById('scan-recipe-status');
   const btn      = document.getElementById('scan-recipe-btn');
@@ -2250,16 +2250,18 @@ async function scanRecipeFromPhoto(event) {
   btn.textContent      = t('scan_recipe_scanning');
   btn.disabled         = true;
   statusEl.style.color = 'var(--muted)';
-  statusEl.textContent = '';
+  statusEl.textContent = files.length > 1 ? `⏳ Processing ${files.length} photos…` : '';
 
   try {
-    const base64    = await resizeImageToBase64(file, 1200);
-    const mediaType = file.type || 'image/jpeg';
+    const images = await Promise.all(files.map(async f => ({
+      image:     await resizeImageToBase64(f, 1200),
+      mediaType: f.type || 'image/jpeg',
+    })));
 
-    const res  = await fetch(`${workerUrl}?action=scan_recipe`, {
+    const res = await fetch(`${workerUrl}?action=scan_recipe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64, mediaType }),
+      body: JSON.stringify({ images }),
     });
     const data = await res.json();
 

@@ -434,8 +434,10 @@ async function scanRecipeFromImage(request, env, corsHeaders) {
   let body;
   try { body = await request.json(); } catch { return errRes(corsHeaders, 'Invalid JSON'); }
 
-  const { image, mediaType } = body || {};
-  if (!image) return errRes(corsHeaders, 'No image provided');
+  // Support both single image (legacy) and multiple images array
+  let images = body?.images;
+  if (!images && body?.image) images = [{ image: body.image, mediaType: body.mediaType }];
+  if (!images?.length) return errRes(corsHeaders, 'No image provided');
 
   const prompt = `You are extracting a recipe from a photo (e.g. a screenshot from Instagram, a cookbook page, or a handwritten recipe card).
 
@@ -475,7 +477,7 @@ Rules:
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: image } },
+            ...images.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType || 'image/jpeg', data: img.image } })),
             { type: 'text', text: prompt },
           ],
         }],
