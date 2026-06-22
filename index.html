@@ -2253,9 +2253,10 @@ async function scanRecipeFromPhoto(event) {
   statusEl.textContent = files.length > 1 ? `⏳ Processing ${files.length} photos…` : '';
 
   try {
+    // resizeImageToBase64 always re-encodes to JPEG, so mediaType is always image/jpeg
     const images = await Promise.all(files.map(async f => ({
       image:     await resizeImageToBase64(f, 1200),
-      mediaType: f.type || 'image/jpeg',
+      mediaType: 'image/jpeg',
     })));
 
     const res = await fetch(`${workerUrl}?action=scan_recipe`, {
@@ -2913,7 +2914,7 @@ async function handleImageCapture(event) {
   setScannerState('analyzing');
   try {
     const base64    = await resizeImageToBase64(file, 800);
-    const mediaType = file.type || 'image/jpeg';
+    const mediaType = 'image/jpeg'; // resizeImageToBase64 always re-encodes to JPEG
     const res = await fetch(`${workerUrl}?action=identify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
