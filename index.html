@@ -3331,6 +3331,12 @@ function applyLang() {
     const lbl = PROTEIN_LABELS[c.getAttribute('data-val')];
     if (lbl) c.textContent = lbl[lang];
   });
+  const mealLabels = {};
+  getMealTypeOptions().forEach(o => { mealLabels[o.val] = o.label; });
+  document.querySelectorAll('#f-mealType .chip').forEach(c => {
+    const lbl = mealLabels[c.getAttribute('data-val')];
+    if (lbl) c.textContent = lbl;
+  });
 
   // Highlight active lang button
   document.querySelectorAll('.lang-btn').forEach(btn => {
