@@ -2606,8 +2606,14 @@ function saveRecipe(e) {
   };
 
   const idx = recipes.findIndex(r => r.id === id);
-  if (idx >= 0) { recipes[idx] = recipe; showToast(t('toast_updated')); }
-  else          { recipe.favourite = true; recipes.unshift(recipe); showToast(t('toast_saved')); }
+  if (idx >= 0) {
+    // Merge edited fields onto the existing recipe so user-state fields
+    // (favourite, cooked, cookedAt, rating, comment) are preserved on edit.
+    recipes[idx] = { ...recipes[idx], ...recipe };
+    showToast(t('toast_updated'));
+  } else {
+    recipe.favourite = true; recipes.unshift(recipe); showToast(t('toast_saved'));
+  }
 
   saveData();
   showView('browse');
