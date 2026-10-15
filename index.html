@@ -2519,25 +2519,24 @@ for (const [en, sv] of Object.entries(INGREDIENT_SV)) {
 }
 
 function translateIngredient(name) {
-  const lower = (name || '').toLowerCase().trim();
+  const raw = name || '';
+  // English mode: show stored names verbatim. The built-in catalog is already
+  // in English, and user-entered recipes are shown exactly as typed (never
+  // auto-rewritten to English).
+  if (lang !== 'sv') return raw;
+  // Swedish mode: translate ONLY on an exact dictionary match (English → Swedish),
+  // so the English catalog shows in Swedish. Anything with no exact match —
+  // including names the user already wrote in Swedish — is shown verbatim.
+  // No fuzzy substring matching: it previously corrupted user data
+  // (e.g. "grahamsmjöl" → "skinka", "röd paprika" → "paprikapulver").
+  return INGREDIENT_SV[raw.toLowerCase().trim()] || raw;
+}
 
-  if (lang === 'sv') {
-    // English → Swedish
-    if (INGREDIENT_SV[lower]) return INGREDIENT_SV[lower];
-    let best = null, bestLen = 0;
-    for (const [key, val] of Object.entries(INGREDIENT_SV)) {
-      if (lower.includes(key) && key.length > bestLen) { best = val; bestLen = key.length; }
-    }
-    return best || name;
-  } else {
-    // Swedish → English (for user-saved recipes with Swedish ingredient names)
-    if (INGREDIENT_EN[lower]) return INGREDIENT_EN[lower];
-    let best = null, bestLen = 0;
-    for (const [sv, en] of Object.entries(INGREDIENT_EN)) {
-      if (lower.includes(sv) && sv.length > bestLen) { best = en; bestLen = sv.length; }
-    }
-    return best || name;
-  }
+// Best-effort English form of an ingredient name, independent of UI language.
+// Used for matching recipe ingredients against (English) scanner results.
+function ingredientToEnglish(name) {
+  const lower = (name || '').toLowerCase().trim();
+  return INGREDIENT_EN[lower] || lower;
 }
 
 // ═══════════════════════════════════════════════════
@@ -2970,11 +2969,11 @@ function scoreRecipeMatch(recipe, detected) {
   const matched = [], missing = [];
   for (const ing of meaningful) {
     const n  = ing.name.toLowerCase().trim();
-    const sv = translateIngredient(n).toLowerCase(); // eng→swe for saved recipes
+    const en = ingredientToEnglish(n); // Swedish names → English for matching scanner results
     const isMatch = detected.some(d => {
       const det = d.toLowerCase().trim();
       return n.includes(det) || det.includes(n) ||
-             sv.includes(det) || det.includes(sv);
+             en.includes(det) || det.includes(en);
     });
     (isMatch ? matched : missing).push(ing);
   }
